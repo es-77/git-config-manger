@@ -116,6 +116,85 @@ class GitService
         return $result['success'] ? trim($result['output']) : null;
     }
 
+    public function getBranches(string $path): array
+    {
+        // Get list of local branches
+        $result = $this->runCommand(['git', 'branch', '--format=%(refname:short)'], $path);
+        return $result['success'] ? array_filter(explode("\n", trim($result['output']))) : [];
+    }
+
+    public function checkout(string $path, string $branch): array
+    {
+        return $this->runCommand(['git', 'checkout', $branch], $path);
+    }
+
+    public function getHistory(string $path, int $limit = 15): array
+    {
+        $result = $this->runCommand([
+            'git',
+            'log',
+            "-$limit",
+            '--pretty=format:%h|%an|%ae|%ar|%s'
+        ], $path);
+
+        if (!$result['success']) return [];
+
+        $lines = explode("\n", trim($result['output']));
+        $history = [];
+
+        foreach ($lines as $line) {
+            $parts = explode('|', $line, 5);
+            if (count($parts) === 5) {
+                $history[] = [
+                    'hash' => $parts[0],
+                    'author_name' => $parts[1],
+                    'author_email' => $parts[2],
+                    'time' => $parts[3],
+                    'message' => $parts[4],
+                ];
+            }
+        }
+
+        return $history;
+    }
+
+    public function getCommitFiles(string $path, string $hash): array
+    {
+        $result = $this->runCommand([
+            'git',
+            'show',
+            '--pretty=',
+            '--name-status',
+            $hash
+        ], $path);
+
+        if (!$result['success']) return [];
+
+        $lines = explode("\n", trim($result['output']));
+        $files = [];
+
+        foreach ($lines as $line) {
+            $parts = preg_split('/\s+/', $line, 2);
+            if (count($parts) === 2) {
+                $statusChar = substr($parts[0], 0, 1);
+                $status = match ($statusChar) {
+                    'A' => 'added',
+                    'M' => 'modified',
+                    'D' => 'deleted',
+                    'R' => 'renamed',
+                    default => 'unknown'
+                };
+
+                $files[] = [
+                    'status' => $status,
+                    'file' => $parts[1]
+                ];
+            }
+        }
+
+        return $files;
+    }
+
     protected function runCommand(array $command, ?string $path = null): array
     {
         // Safe execution using Laravel Process

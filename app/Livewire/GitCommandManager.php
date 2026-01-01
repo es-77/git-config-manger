@@ -10,14 +10,21 @@ class GitCommandManager extends Component
 {
     public $directory = '';
     public $currentBranch = '';
+    public $branches = [];
+    public $history = [];
+    public $viewMode = 'console'; // 'console' or 'history'
     public $outputLog = [];
     public $isLoading = false;
+
+    // Expanded Commit Details
+    public $selectedCommitHash = null;
+    public $commitDetails = [];
 
     public function mount(GitService $git)
     {
         $this->directory = session('current_git_dir', '');
         if ($this->directory) {
-            $this->currentBranch = $git->getCurrentBranch($this->directory);
+            $this->refreshCtx($git);
         }
     }
 
@@ -27,9 +34,35 @@ class GitCommandManager extends Component
         if ($path) {
             $this->directory = $path;
             session(['current_git_dir' => $path]);
-            $this->currentBranch = $git->getCurrentBranch($this->directory);
+            $this->refreshCtx($git);
             $this->addLog("Selected directory: $path");
         }
+    }
+
+    public function switchBranch(GitService $git, $branch)
+    {
+        if (!$branch || $branch === $this->currentBranch) return;
+
+        $this->runGitCommand($git, 'checkout', "Switching to branch '$branch'...", [$branch]);
+    }
+
+    public function expandCommit(GitService $git, $hash)
+    {
+        if ($this->selectedCommitHash === $hash) {
+            // Collapse if already selected
+            $this->selectedCommitHash = null;
+            $this->commitDetails = [];
+            return;
+        }
+
+        $this->selectedCommitHash = $hash;
+        $this->commitDetails = $git->getCommitFiles($this->directory, $hash);
+    }
+
+    protected function refreshCtx(GitService $git)
+    {
+        $this->currentBranch = $git->getCurrentBranch($this->directory);
+        $this->branches = $git->getBranches($this->directory);
     }
 
     public function gitPull(GitService $git)
@@ -45,6 +78,19 @@ class GitCommandManager extends Component
     public function gitFetch(GitService $git)
     {
         $this->runGitCommand($git, 'fetch', 'Fetching refs...');
+    }
+
+    public function showHistory(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+
+        $this->viewMode = 'history';
+        $this->history = $git->getHistory($this->directory, 50); // Fetch more items for list view
+    }
+
+    public function showConsole()
+    {
+        $this->viewMode = 'console';
     }
 
     public function gitRollback(GitService $git)
@@ -77,7 +123,7 @@ class GitCommandManager extends Component
         if ($method === 'reset') {
             $result = $git->reset($this->directory, ...$args);
         } else {
-            $result = $git->$method($this->directory);
+            $result = $git->$method($this->directory, ...$args);
         }
 
         if ($result['success']) {
@@ -86,7 +132,7 @@ class GitCommandManager extends Component
                 $this->addLog($result['output'], 'text-gray-300');
             }
             // Refresh branch status in case it changed
-            $this->currentBranch = $git->getCurrentBranch($this->directory);
+            $this->refreshCtx($git);
         } else {
             $this->addLog("✘ Failed", 'text-red-400');
             $this->addLog($result['error'] ?: $result['output'], 'text-red-300');

@@ -9,13 +9,21 @@
         <div class="flex space-x-4 w-2/3 justify-end items-center">
 
             @if ($currentBranch)
-                <div class="flex items-center space-x-2 bg-gray-800 border border-indigo-500/30 px-3 py-1.5 rounded-lg max-w-[200px]"
+                <div class="relative bg-gray-800 border border-indigo-500/30 rounded-lg max-w-[200px]"
                     title="Current Branch: {{ $currentBranch }}">
-                    <svg class="w-4 h-4 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                    <span class="text-indigo-300 font-mono text-sm font-bold truncate">{{ $currentBranch }}</span>
+                    <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <select wire:change="switchBranch($event.target.value)"
+                        class="appearance-none bg-transparent text-indigo-300 font-mono text-sm font-bold pl-8 pr-4 py-1.5 w-full rounded-lg focus:outline-none focus:bg-gray-700 cursor-pointer text-ellipsis overflow-hidden">
+                        @foreach ($branches as $branch)
+                            <option value="{{ $branch }}" {{ $branch === $currentBranch ? 'selected' : '' }}>
+                                {{ $branch }}</option>
+                        @endforeach
+                    </select>
                 </div>
             @endif
 
@@ -72,6 +80,16 @@
                 </svg>
             </button>
 
+            <button wire:click="gitLog" wire:loading.attr="disabled"
+                class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors flex items-center justify-between group border border-gray-700">
+                <span class="text-sm font-semibold text-gray-200">History</span>
+                <svg class="w-4 h-4 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </button>
+
             <div class="h-4"></div>
             <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Destructive Actions</h3>
 
@@ -118,26 +136,132 @@
             </div>
         </div>
 
-        <!-- Right Panel: Output Log -->
+        <!-- Right Panel: Output Log / History -->
         <div class="flex-1 bg-black rounded-lg border border-gray-700 overflow-hidden flex flex-col relative">
-            <div class="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700">
-                <span class="text-xs font-mono text-gray-400">Terminal Output</span>
-                <button wire:click="clearLog"
-                    class="text-xs text-gray-500 hover:text-white hover:underline">Clear</button>
+            <!-- Tabs -->
+            <div class="flex bg-gray-800 border-b border-gray-700">
+                <button wire:click="showConsole"
+                    class="px-6 py-2 text-sm font-medium transition-colors border-r border-gray-700 {{ $viewMode === 'console' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700/50' }}">
+                    Terminal
+                </button>
+                <button wire:click="showHistory"
+                    class="px-6 py-2 text-sm font-medium transition-colors border-r border-gray-700 {{ $viewMode === 'history' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700/50' }}">
+                    History
+                </button>
+
+                @if ($viewMode === 'console')
+                    <div class="ml-auto px-4 flex items-center">
+                        <button wire:click="clearLog"
+                            class="text-xs text-gray-500 hover:text-white hover:underline">Clear</button>
+                    </div>
+                @endif
             </div>
 
-            <div class="flex-1 p-4 overflow-y-auto font-mono text-sm space-y-1" id="terminal-output">
-                @forelse($outputLog as $log)
-                    <div class="break-words">
-                        <span class="text-gray-600">[{{ $log['time'] }}]</span>
-                        <span class="{{ $log['color'] }}">{!! nl2br(e($log['message'])) !!}</span>
+            <div class="flex-1 overflow-hidden relative">
+                @if ($viewMode === 'console')
+                    <!-- Console View -->
+                    <div class="absolute inset-0 p-4 overflow-y-auto font-mono text-sm space-y-1"
+                        id="terminal-output">
+                        @forelse($outputLog as $log)
+                            <div class="break-words">
+                                <span class="text-gray-600">[{{ $log['time'] }}]</span>
+                                <span class="{{ $log['color'] }}">{!! nl2br(e($log['message'])) !!}</span>
+                            </div>
+                        @empty
+                            <div class="text-gray-600 italic text-center mt-10">No commands run yet defined.</div>
+                        @endforelse
+                        <div x-data x-init="$el.scrollIntoView()"></div>
                     </div>
-                @empty
-                    <div class="text-gray-600 italic text-center mt-10">No commands run yet defined.</div>
-                @endforelse
+                @elseif($viewMode === 'history')
+                    <!-- History List View -->
+                    <div class="absolute inset-0 overflow-y-auto">
+                        @forelse($history as $commit)
+                            <div class="border-b border-gray-800 transition-colors group">
+                                <div wire:click="expandCommit('{{ $commit['hash'] }}')"
+                                    class="flex items-start p-3 hover:bg-gray-800/50 cursor-pointer">
+                                    <div class="flex-shrink-0 mr-3 mt-1">
+                                        <!-- Avatar Placeholder (Initials) -->
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 border border-gray-600">
+                                            {{ strtoupper(substr($commit['author_name'], 0, 2)) }}
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex justify-between items-baseline mb-0.5">
+                                            <p class="text-sm font-semibold text-gray-200 truncate pr-2"
+                                                title="{{ $commit['message'] }}">
+                                                {{ $commit['message'] }}
+                                            </p>
+                                            <span
+                                                class="text-xs text-gray-500 whitespace-nowrap">{{ $commit['time'] }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-gray-400">{{ $commit['author_name'] }}</span>
+                                                @if (isset($commit['author_email']))
+                                                    <span
+                                                        class="text-gray-600 hidden group-hover:inline">&lt;{{ $commit['author_email'] }}&gt;</span>
+                                                @endif
+                                            </div>
+                                            <div
+                                                class="font-mono text-gray-600 bg-gray-900 px-1.5 py-0.5 rounded text-[10px] border border-gray-800">
+                                                {{ $commit['hash'] }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                <!-- Anchor for auto-scroll -->
-                <div x-data x-init="$el.scrollIntoView()"></div>
+                                <!-- Expanded Details -->
+                                @if ($selectedCommitHash === $commit['hash'])
+                                    <div class="bg-black/30 px-3 pb-3 pt-1 border-t border-gray-800/50">
+                                        <div
+                                            class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider pl-11">
+                                            Changed Files</div>
+                                        <div class="space-y-1 pl-11">
+                                            @forelse($commitDetails as $file)
+                                                <div class="flex items-center text-xs font-mono group/file">
+                                                    @php
+                                                        $statusColors = [
+                                                            'added' => 'text-green-400',
+                                                            'modified' => 'text-yellow-400',
+                                                            'deleted' => 'text-red-400',
+                                                            'renamed' => 'text-purple-400',
+                                                            'unknown' => 'text-gray-400',
+                                                        ];
+                                                        $statusIcons = [
+                                                            'added' => '+',
+                                                            'modified' => '•',
+                                                            'deleted' => '-',
+                                                            'renamed' => '→',
+                                                            'unknown' => '?',
+                                                        ];
+                                                        $color = $statusColors[$file['status']] ?? 'text-gray-400';
+                                                        $icon = $statusIcons[$file['status']] ?? '?';
+                                                    @endphp
+                                                    <span
+                                                        class="{{ $color }} w-4 text-center font-bold mr-2">{{ $icon }}</span>
+                                                    <span
+                                                        class="text-gray-300 group-hover/file:text-white truncate">{{ $file['file'] }}</span>
+                                                    <span
+                                                        class="ml-auto text-[10px] uppercase text-gray-600 ml-2">{{ $file['status'] }}</span>
+                                                </div>
+                                            @empty
+                                                <div class="text-gray-500 italic">No file changes found in this commit.
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="text-center py-10">
+                                <div class="text-gray-500 mb-2">No history loaded.</div>
+                                <button wire:click="showHistory"
+                                    class="text-indigo-400 hover:text-indigo-300 text-sm">Refresh History</button>
+                            </div>
+                        @endforelse
+                    </div>
+                @endif
             </div>
         </div>
     </div>
