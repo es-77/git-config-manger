@@ -84,6 +84,38 @@ class GitService
         return $result['success'];
     }
 
+    public function pull(string $path): array
+    {
+        return $this->runCommand(['git', 'pull'], $path);
+    }
+
+    public function push(string $path): array
+    {
+        return $this->runCommand(['git', 'push'], $path);
+    }
+
+    public function fetch(string $path): array
+    {
+        return $this->runCommand(['git', 'fetch'], $path);
+    }
+
+    public function reset(string $path, string $mode = 'mixed', string $target = 'HEAD'): array
+    {
+        $cmd = ['git', 'reset'];
+        if ($mode) {
+            $cmd[] = "--$mode";
+        }
+        $cmd[] = $target;
+
+        return $this->runCommand($cmd, $path);
+    }
+
+    public function getCurrentBranch(string $path): ?string
+    {
+        $result = $this->runCommand(['git', 'branch', '--show-current'], $path);
+        return $result['success'] ? trim($result['output']) : null;
+    }
+
     protected function runCommand(array $command, ?string $path = null): array
     {
         // Safe execution using Laravel Process

@@ -7,7 +7,6 @@
         </div>
 
         <!-- Add Profile Form (Inline) -->
-        <!-- Add/Edit Profile Form (Inline) -->
         <div class="bg-gray-800 p-3 rounded-lg flex items-center space-x-2 border border-gray-700 shadow-sm">
             <input wire:model="name" type="text" placeholder="Name"
                 class="bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 w-32">

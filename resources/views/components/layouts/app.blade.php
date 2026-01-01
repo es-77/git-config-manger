@@ -59,6 +59,15 @@
                     </svg>
                     <span>SSH Keys</span>
                 </a>
+                <a href="/git-ops" wire:navigate
+                    class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('git-ops') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                    <span>Git Operations</span>
+                </a>
             </nav>
 
             <div class="p-4 border-t border-gray-700 text-xs text-gray-500 text-center">

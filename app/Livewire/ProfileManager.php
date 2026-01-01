@@ -27,6 +27,7 @@ class ProfileManager extends Component
 
     public function mount(ProfileService $profileService, GitService $gitService)
     {
+        $this->directory = session('current_git_dir', '');
         $this->importGlobalProfile($profileService, $gitService);
         $this->refreshProfiles();
         $this->refreshCurrentConfig($gitService);
@@ -154,10 +155,11 @@ class ProfileManager extends Component
     public function pickDirectory(GitService $git)
     {
         // Bridge to native dialog
-        $path = Dialog::new()->open();
+        $path = Dialog::new()->folders()->open();
 
         if ($path) {
             $this->directory = $path;
+            session(['current_git_dir' => $path]);
             $this->refreshCurrentConfig($git);
         }
     }
@@ -195,6 +197,67 @@ class ProfileManager extends Component
 
         $this->refreshCurrentConfig($git);
         $this->dispatch('notify', "Local config updated for repo.");
+    }
+
+    public function gitPull(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+        $result = $git->pull($this->directory);
+        $this->handleGitResult($result, 'Pull successful');
+    }
+
+    public function gitPush(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+        $result = $git->push($this->directory);
+        $this->handleGitResult($result, 'Push successful');
+    }
+
+    public function gitFetch(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+        $result = $git->fetch($this->directory);
+        $this->handleGitResult($result, 'Fetch successful');
+    }
+
+    public function gitRollback(GitService $git)
+    {
+        // "Rollback" -> Undo last commit but keep changes (Mixed reset)
+        if (!$this->validateRepo($git)) return;
+        $result = $git->reset($this->directory, 'mixed', 'HEAD~1');
+        $this->handleGitResult($result, 'Rollback successful');
+    }
+
+    public function gitSoftReset(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+        $result = $git->reset($this->directory, 'soft', 'HEAD~1');
+        $this->handleGitResult($result, 'Soft Reset successful');
+    }
+
+    public function gitHardReset(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+        $result = $git->reset($this->directory, 'hard', 'HEAD');
+        $this->handleGitResult($result, 'Hard Reset successful');
+    }
+
+    protected function validateRepo(GitService $git)
+    {
+        if (!$this->directory || !$git->isGitRepo($this->directory)) {
+            $this->dispatch('notify', 'Invalid Git repository.');
+            return false;
+        }
+        return true;
+    }
+
+    protected function handleGitResult($result, $successMsg)
+    {
+        if ($result['success']) {
+            $this->dispatch('notify', $successMsg);
+        } else {
+            $this->dispatch('notify', 'Error: ' . ($result['error'] ?: $result['output']));
+        }
     }
 
     public function render()
