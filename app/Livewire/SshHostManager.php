@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Services\SshConfigService;
 use Native\Desktop\Dialog;
+use Illuminate\Support\Facades\Process;
 
 class SshHostManager extends Component
 {
@@ -16,6 +17,7 @@ class SshHostManager extends Component
     public $user = '';
     public $identityFile = '';
     public $port = '';
+    public $preferredAuthentications = '';
 
     public $isEditing = false;
     public $originalAlias = '';
@@ -49,8 +51,9 @@ class SshHostManager extends Component
             'HostName' => $this->hostName,
         ];
         if ($this->user) $details['User'] = $this->user;
-        if ($this->identityFile) $details['IdentityFile'] = $this->identityFile;
+        if ($this->identityFile) $details['IdentityFile'] = $this->contractPath($this->identityFile);
         if ($this->port) $details['Port'] = $this->port;
+        if ($this->preferredAuthentications) $details['PreferredAuthentications'] = $this->preferredAuthentications;
 
         $newHostData = [
             'Host' => $this->alias,
@@ -81,6 +84,7 @@ class SshHostManager extends Component
             $this->user = $host['details']['User'] ?? '';
             $this->identityFile = $host['details']['IdentityFile'] ?? '';
             $this->port = $host['details']['Port'] ?? '';
+            $this->preferredAuthentications = $host['details']['PreferredAuthentications'] ?? '';
             $this->isEditing = true;
         }
     }
@@ -100,7 +104,82 @@ class SshHostManager extends Component
 
     protected function resetForm()
     {
-        $this->reset(['alias', 'hostName', 'user', 'identityFile', 'port', 'isEditing', 'originalAlias']);
+        $this->reset(['alias', 'hostName', 'user', 'identityFile', 'port', 'preferredAuthentications', 'isEditing', 'originalAlias']);
+    }
+
+    public function copyPublicKey()
+    {
+        if (empty($this->identityFile)) {
+            $this->dispatch('notify', 'No identity file selected.');
+            return;
+        }
+
+        $expandedPath = $this->expandPath($this->identityFile);
+        $pubKeyPath = $expandedPath . '.pub';
+
+        if (file_exists($pubKeyPath)) {
+            $content = trim(file_get_contents($pubKeyPath));
+            $this->dispatch('copy-to-clipboard', content: $content);
+            $this->dispatch('notify', 'Public key copied to clipboard.');
+        } else {
+            $this->dispatch('notify', 'Public key file (.pub) not found.');
+        }
+    }
+
+    protected function expandPath($path)
+    {
+        if (str_starts_with($path, '~/')) {
+            $home = getenv('HOME') ?: $_SERVER['HOME'] ?? '';
+            if (empty($home) && function_exists('posix_getpwuid')) {
+                $home = posix_getpwuid(posix_getuid())['dir'];
+            }
+            return $home . substr($path, 1);
+        }
+        return $path;
+    }
+
+    protected function contractPath($path)
+    {
+        $home = getenv('HOME') ?: $_SERVER['HOME'] ?? '';
+        if (empty($home) && function_exists('posix_getpwuid')) {
+            $home = posix_getpwuid(posix_getuid())['dir'];
+        }
+
+        if (str_starts_with($path, $home)) {
+            return '~' . substr($path, strlen($home));
+        }
+        return $path;
+    }
+
+    public function generateNewKey($filename)
+    {
+        if (empty($filename)) {
+            $this->dispatch('notify', 'Filename is required.');
+            return;
+        }
+
+        $sshDir = $this->expandPath('~/.ssh');
+        if (!file_exists($sshDir)) {
+            mkdir($sshDir, 0700, true);
+        }
+
+        $path = $sshDir . '/' . $filename;
+
+        if (file_exists($path)) {
+            $this->dispatch('notify', 'Key already exists with this name.');
+            return;
+        }
+
+        // Generate ED25519 key
+        $result = Process::run(['ssh-keygen', '-t', 'ed25519', '-f', $path, '-N', '', '-q']);
+
+        if ($result->successful()) {
+            $this->identityFile = $path;
+            $this->dispatch('notify', 'SSH Key generated successfully.');
+            $this->dispatch('close-modal', 'key-gen-modal');
+        } else {
+            $this->dispatch('notify', 'Failed to generate SSH Key: ' . $result->errorOutput());
+        }
     }
 
     public function render()
