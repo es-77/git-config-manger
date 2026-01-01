@@ -195,6 +195,21 @@ class GitService
         return $files;
     }
 
+    public function getFileDiff(string $path, string $hash, string $file): string
+    {
+        $result = $this->runCommand([
+            'git',
+            'show',
+            '--pretty=',
+            '--patch',
+            $hash,
+            '--',
+            $file
+        ], $path);
+
+        return $result['success'] ? $result['output'] : '';
+    }
+
     protected function runCommand(array $command, ?string $path = null): array
     {
         // Safe execution using Laravel Process

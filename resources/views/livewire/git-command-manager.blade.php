@@ -219,7 +219,8 @@
                                             Changed Files</div>
                                         <div class="space-y-1 pl-11">
                                             @forelse($commitDetails as $file)
-                                                <div class="flex items-center text-xs font-mono group/file">
+                                                <div wire:click="showFileDiff('{{ $file['file'] }}')"
+                                                    class="flex items-center text-xs font-mono group/file cursor-pointer hover:bg-gray-800/50 rounded px-1 transition-colors">
                                                     @php
                                                         $statusColors = [
                                                             'added' => 'text-green-400',
@@ -241,7 +242,7 @@
                                                     <span
                                                         class="{{ $color }} w-4 text-center font-bold mr-2">{{ $icon }}</span>
                                                     <span
-                                                        class="text-gray-300 group-hover/file:text-white truncate">{{ $file['file'] }}</span>
+                                                        class="text-gray-300 group-hover/file:text-white truncate underline group-hover/file:no-underline">{{ $file['file'] }}</span>
                                                     <span
                                                         class="ml-auto text-[10px] uppercase text-gray-600 ml-2">{{ $file['status'] }}</span>
                                                 </div>
@@ -260,6 +261,49 @@
                                     class="text-indigo-400 hover:text-indigo-300 text-sm">Refresh History</button>
                             </div>
                         @endforelse
+                    </div>
+                @elseif($viewMode === 'diff')
+                    <!-- Diff Viewer -->
+                    <div class="absolute inset-0 flex flex-col bg-gray-900 z-10">
+                        <div
+                            class="bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-700 shadow-md">
+                            <div class="flex items-center space-x-3">
+                                <button wire:click="closeDiff"
+                                    class="text-gray-400 hover:text-white transition-colors bg-gray-700 hover:bg-gray-600 rounded px-2 py-1 flex items-center text-xs">
+                                    <span>&larr; Back</span>
+                                </button>
+                                <span class="text-sm font-medium text-gray-200 truncate max-w-[300px]"
+                                    title="{{ $selectedFile }}">
+                                    {{ $selectedFile }}
+                                </span>
+                            </div>
+                            <span
+                                class="text-xs text-gray-500 font-mono border border-gray-700 rounded px-2 py-0.5 bg-gray-800">{{ substr($selectedCommitHash, 0, 7) }}</span>
+                        </div>
+                        <div class="flex-1 overflow-auto p-4 font-mono text-xs text-gray-300 bg-gray-950">
+                            @if (empty($fileDiff))
+                                <div class="text-center text-gray-500 mt-10 italic">Binary file or no content changes.
+                                </div>
+                            @else
+                                <pre class="whitespace-pre-wrap leading-relaxed">
+@foreach (explode("\n", $fileDiff) as $line)
+@php
+    $class = 'text-gray-300';
+    if (str_starts_with($line, '+')) {
+        $class = 'text-green-400 bg-green-900/10 block border-l-2 border-green-500/50 pl-2';
+    } elseif (str_starts_with($line, '-')) {
+        $class = 'text-red-400 bg-red-900/10 block border-l-2 border-red-500/50 pl-2';
+    } elseif (str_starts_with($line, '@@')) {
+        $class = 'text-purple-400 block mt-4 mb-2 font-bold bg-gray-900 p-1 border border-gray-800 rounded';
+    } else {
+        $class = 'pl-2.5 block text-gray-400';
+    }
+@endphp
+<span class="{{ $class }}">{{ $line }}</span>
+@endforeach
+</pre>
+                            @endif
+                        </div>
                     </div>
                 @endif
             </div>

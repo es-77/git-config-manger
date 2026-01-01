@@ -20,12 +20,50 @@ class GitCommandManager extends Component
     public $selectedCommitHash = null;
     public $commitDetails = [];
 
+    // File Diff Details
+    public $selectedFile = null;
+    public $fileDiff = '';
+
     public function mount(GitService $git)
     {
         $this->directory = session('current_git_dir', '');
         if ($this->directory) {
             $this->refreshCtx($git);
         }
+    }
+
+    // ... existing ...
+
+    public function expandCommit(GitService $git, $hash)
+    {
+        if ($this->selectedCommitHash === $hash) {
+            $this->selectedCommitHash = null;
+            $this->commitDetails = [];
+            return;
+        }
+
+        $this->selectedCommitHash = $hash;
+        $this->commitDetails = $git->getCommitFiles($this->directory, $hash);
+
+        // Reset diff when switching commits
+        $this->selectedFile = null;
+        $this->fileDiff = '';
+    }
+
+    public function showFileDiff(GitService $git, $file)
+    {
+        if (!$this->selectedCommitHash) return;
+
+        $this->selectedFile = $file;
+        $this->fileDiff = $git->getFileDiff($this->directory, $this->selectedCommitHash, $file);
+        $this->viewMode = 'diff';
+    }
+
+    public function closeDiff()
+    {
+        $this->selectedFile = null;
+        $this->fileDiff = '';
+        $this->viewMode = 'history';
     }
 
     public function pickDirectory(GitService $git)
@@ -44,19 +82,6 @@ class GitCommandManager extends Component
         if (!$branch || $branch === $this->currentBranch) return;
 
         $this->runGitCommand($git, 'checkout', "Switching to branch '$branch'...", [$branch]);
-    }
-
-    public function expandCommit(GitService $git, $hash)
-    {
-        if ($this->selectedCommitHash === $hash) {
-            // Collapse if already selected
-            $this->selectedCommitHash = null;
-            $this->commitDetails = [];
-            return;
-        }
-
-        $this->selectedCommitHash = $hash;
-        $this->commitDetails = $git->getCommitFiles($this->directory, $hash);
     }
 
     protected function refreshCtx(GitService $git)
