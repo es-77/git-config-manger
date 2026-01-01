@@ -80,7 +80,7 @@
                 </svg>
             </button>
 
-            <button wire:click="gitLog" wire:loading.attr="disabled"
+            <button wire:click="showHistory" wire:loading.attr="disabled"
                 class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors flex items-center justify-between group border border-gray-700">
                 <span class="text-sm font-semibold text-gray-200">History</span>
                 <svg class="w-4 h-4 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor"
