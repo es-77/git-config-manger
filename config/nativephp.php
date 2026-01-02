@@ -39,7 +39,7 @@ return [
     /**
      * The description of your application.
      */
-    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'Git config manager'),
+    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'Git config manager Emmanuel saleem'),
 
     /**
      * The Website of your application.

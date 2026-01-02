@@ -17,7 +17,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
         Window::open()
             ->width(1000)
             ->height(800)
-            ->title('Git Config Manager')
+            ->title('Git Config Manager (Emmanuel saleem)')
             ->rememberState();
 
         GlobalShortcut::new()
