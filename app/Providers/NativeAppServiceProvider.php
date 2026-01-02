@@ -20,6 +20,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
             ->title('Git Config Manager (Emmanuel saleem)')
             ->rememberState()
             ->frame(false)
+            ->hideMenu()
             ->icon(resource_path('logo.svg'));
 
         GlobalShortcut::new()

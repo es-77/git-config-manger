@@ -14,14 +14,14 @@ Route::get('/git-ops', GitCommandManager::class);
 Route::get('/project-setup', ProjectSetup::class);
 Route::get('/spotlight', Spotlight::class);
 
-Route::get('/native/minimize', function () {
+Route::post('/native/minimize', function () {
     Window::minimize();
 });
 
-Route::get('/native/maximize', function () {
+Route::post('/native/maximize', function () {
     Window::maximize();
 });
 
-Route::get('/native/close', function () {
+Route::post('/native/close', function () {
     Window::close();
 });
