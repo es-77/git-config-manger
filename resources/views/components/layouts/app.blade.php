@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Git Manager' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -30,14 +31,51 @@
 
 <body
     class="bg-gray-900 text-gray-100 font-sans antialiased h-screen flex flex-col overflow-hidden selection:bg-indigo-500 selection:text-white">
+
+    <!-- Custom Title Bar -->
+    <header
+        class="h-10 bg-gray-800 flex items-center justify-between px-3 select-none draggable-region border-b border-gray-700"
+        style="-webkit-app-region: drag">
+        <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+            </svg>
+            <span class="text-sm font-medium">Git Config Manager</span>
+        </div>
+        <div class="flex items-center space-x-1 no-drag" style="-webkit-app-region: no-drag">
+            <!-- Minimize -->
+            <button onclick="handleWindowAction('minimize')"
+                class="p-1.5 hover:bg-gray-700 rounded transition-colors text-gray-400 hover:text-white focus:outline-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                </svg>
+            </button>
+            <!-- Maximize/Restore -->
+            <button onclick="handleWindowAction('maximize')"
+                class="p-1.5 hover:bg-gray-700 rounded transition-colors text-gray-400 hover:text-white focus:outline-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                    </path>
+                </svg>
+            </button>
+            <!-- Close -->
+            <button onclick="handleWindowAction('close')"
+                class="p-1.5 hover:bg-red-600 rounded transition-colors text-gray-400 hover:text-white focus:outline-none group">
+                <svg class="w-4 h-4 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
     <div class="flex-1 flex overflow-hidden">
         <!-- Sidebar -->
         <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
-            <div class="p-4 border-b border-gray-700 flex items-center space-x-2 draggable-region">
-                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                </svg>
+            <!-- Updated Sidebar Header to remove redundancy or keep as brand area -->
+            <div class="p-4 border-b border-gray-700 flex items-center space-x-2">
                 <span class="font-bold text-lg tracking-wide">GitConfig<span class="text-indigo-500">Mgr</span></span>
             </div>
 
@@ -67,6 +105,13 @@
                         </path>
                     </svg>
                     <span>Git Operations</span>
+                </a>
+                <a href="/project-setup" wire:navigate
+                    class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('project-setup') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Project Setup</span>
                 </a>
             </nav>
 
@@ -102,6 +147,30 @@
             </div>
         </template>
     </div>
+
+    <script>
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        async function handleWindowAction(action) {
+            try {
+                const response = await fetch(`/native/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error(`Failed to ${action} window:`, response.statusText);
+                }
+            } catch (error) {
+                console.error(`Error executing ${action}:`, error);
+            }
+        }
+    </script>
 
     @livewireScripts
 </body>

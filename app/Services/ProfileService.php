@@ -10,10 +10,10 @@ class ProfileService
 
     public function getProfiles(): array
     {
-        if (!Storage::exists($this->path)) {
+        if (!Storage::disk('persistent')->exists($this->path)) {
             return [];
         }
-        $json = Storage::get($this->path);
+        $json = Storage::disk('persistent')->get($this->path);
         return json_decode($json, true) ?? [];
     }
 
@@ -52,6 +52,6 @@ class ProfileService
 
     protected function saveProfiles(array $profiles): void
     {
-        Storage::put($this->path, json_encode($profiles, JSON_PRETTY_PRINT));
+        Storage::disk('persistent')->put($this->path, json_encode($profiles, JSON_PRETTY_PRINT));
     }
 }

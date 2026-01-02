@@ -19,10 +19,7 @@ class SshHostManager extends Component
     public $port = '';
     public $preferredAuthentications = '';
 
-    // Clone Helper
-    public $cloneInputUrl = '';
-    public $cloneSelectedHost = '';
-    public $cloneTargetDirectory = '';
+
 
     public $isEditing = false;
     public $originalAlias = '';
@@ -187,68 +184,7 @@ class SshHostManager extends Component
         }
     }
 
-    public function getCloneCommandProperty()
-    {
-        if (empty($this->cloneInputUrl) || empty($this->cloneSelectedHost)) {
-            return '';
-        }
 
-        $url = trim($this->cloneInputUrl);
-        $path = '';
-
-        // Matches git@host:path or https://host/path
-        if (preg_match('/^(?:git@|https:\/\/)(?:[\w\.-]+)(?::|\/)(.+)$/', $url, $matches)) {
-            $path = $matches[1];
-        } else {
-            // Fallback: assume whole string is path if no protocol
-            $path = $url;
-        }
-
-        $cmd = "git clone git@" . $this->cloneSelectedHost . ":" . $path;
-
-        if ($this->cloneTargetDirectory) {
-            return "cd " . escapeshellarg($this->cloneTargetDirectory) . " && " . $cmd;
-        }
-
-        return $cmd;
-    }
-
-    public function pickCloneTargetDirectory()
-    {
-        $path = Dialog::new()->folders()->open();
-        if ($path) {
-            $this->cloneTargetDirectory = $path;
-        }
-    }
-
-    public function copyCloneCommand()
-    {
-        $cmd = $this->cloneCommand;
-        if ($cmd) {
-            $this->dispatch('copy-to-clipboard', content: $cmd);
-            $this->dispatch('notify', 'Clone command copied to clipboard.');
-        }
-    }
-
-    public function runCloneCommand()
-    {
-        $cmd = $this->cloneCommand;
-        if (!$cmd) {
-            return;
-        }
-
-        // Execute via bash. We set GIT_SSH_COMMAND to accept new host keys automatically
-        // to prevent the process from hanging on the "Are you sure..." prompt.
-        $result = Process::env([
-            'GIT_SSH_COMMAND' => 'ssh -o StrictHostKeyChecking=accept-new'
-        ])->run(['bash', '-c', $cmd]);
-
-        if ($result->successful()) {
-            $this->dispatch('notify', 'Repository cloned successfully.');
-        } else {
-            $this->dispatch('notify', 'Clone failed: ' . $result->errorOutput());
-        }
-    }
 
     public function render()
     {
