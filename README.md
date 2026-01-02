@@ -70,3 +70,13 @@ Quickly access features and switch profiles using the built-in Spotlight window.
 ## License
 
 The MIT License (MIT).
+
+php artisan native:build linux
+
+First: Fix the Launch Crash (Chrome Sandbox Issue)
+The previous crash happened because Electron's security sandbox requires special permissions on its helper binary.
+Since you reinstalled the .deb (overwriting the old one), the fix needs to be reapplied:
+Bashsudo chown root /opt/Emmanuel-saleem-git-manager/chrome-sandbox
+sudo chmod 4755 /opt/Emmanuel-saleem-git-manager/chrome-sandbox
+Now launch it:
+Bashemmanuel-saleem-git-manager
