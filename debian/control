@@ -1,0 +1,12 @@
+Source: git-config-manager
+Maintainer: Emmanuel Saleem <emmanuelsaleem098765@gmail.com>
+Section: utils
+Priority: optional
+Standards-Version: 4.6.0
+Build-Depends: debhelper-compat (= 13)
+
+Package: git-config-manager
+Architecture: all
+Depends: php, php-mbstring, php-xml, php-curl
+Description: Git Config Manager desktop tool
+ A PHP-based desktop application to manage Git configuration settings.
