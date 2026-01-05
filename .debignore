@@ -1,0 +1,4 @@
+nativephp/electron/dist/*.deb
+nativephp/electron/dist/*.AppImage
+debian/
+README.md
