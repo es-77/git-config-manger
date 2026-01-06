@@ -4,6 +4,23 @@
             <h1 class="text-2xl font-bold text-white">SSH Configuration</h1>
             <p class="text-gray-400 text-sm">Manage entries in your ~/.ssh/config file.</p>
         </div>
+        <div class="flex space-x-2 items-center w-1/2">
+            <input wire:model="customConfigPath" wire:change="updateConfigPath" type="text"
+                placeholder="Default (~/.ssh/config)"
+                class="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-1 text-sm text-white focus:outline-none focus:border-indigo-500">
+            <button wire:click="pickSshConfigFolder" title="Browse Folder"
+                class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-white text-sm transition-colors border border-gray-600">
+                ...
+            </button>
+            <button wire:click="resetSshConfigPath" title="Reset to Default"
+                class="text-gray-400 hover:text-red-400 p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -144,9 +161,10 @@
     </div>
 
     <!-- Key Gen Modal -->
-    <div x-data="{ open: false, filename: 'id_ed25519' }" @open-modal.window="if ($event.detail === 'key-gen-modal') open = true"
-        @close-modal.window="if ($event.detail === 'key-gen-modal') open = false" x-show="open"
-        style="display: none;"
+    <div x-data="{ open: false, filename: 'id_ed25519' }"
+        @open-modal.window="if ($event.detail === 'key-gen-modal' || $event.detail?.[0] === 'key-gen-modal') open = true"
+        @close-modal.window="if ($event.detail === 'key-gen-modal' || $event.detail?.[0] === 'key-gen-modal') open = false"
+        x-show="open" style="display: none;"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
@@ -165,15 +183,49 @@
                     @keydown.enter="$wire.generateNewKey(filename)">
             </div>
 
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Save
+                    Location</label>
+                <div class="flex space-x-2">
+                    <input wire:model="newKeyLocation" type="text"
+                        class="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        readonly>
+                    <button wire:click="pickNewKeyLocation" title="Browse"
+                        class="bg-gray-700 hover:bg-gray-600 px-3 rounded text-white transition-colors">
+                        ...
+                    </button>
+                </div>
+            </div>
+
             <div class="flex justify-end space-x-3">
                 <button @click="open = false"
                     class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors">
                     Cancel
                 </button>
-                <button @click="$wire.generateNewKey(filename)"
-                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-medium transition-colors">
+                <button @click="$wire.generateNewKey(filename)" wire:loading.attr="disabled"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     Generate & Select
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generator Loading Overlay -->
+    <div wire:loading.flex wire:target="generateNewKey" style="display: none;"
+        class="fixed inset-0 z-[60] bg-black/80 flex-col items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="flex flex-col items-center p-8 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl space-y-4">
+            <svg class="animate-spin w-12 h-12 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                    stroke-width="4">
+                </circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <div class="text-center">
+                <h3 class="text-lg font-bold text-white">Generating Key</h3>
+                <p class="text-gray-400 text-sm mt-1">Creating secure ED25519 pair...</p>
             </div>
         </div>
     </div>

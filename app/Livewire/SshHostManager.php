@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Services\SshConfigService;
 use Native\Desktop\Dialog;
+use Native\Desktop\Facades\Settings;
 use Illuminate\Support\Facades\Process;
 
 class SshHostManager extends Component
@@ -13,13 +14,14 @@ class SshHostManager extends Component
 
     // Form fields
     public $alias = '';
-    public $hostName = '';
+    public $hostName = 'github.com';
     public $user = '';
     public $identityFile = '';
     public $port = '';
-    public $preferredAuthentications = '';
+    public $preferredAuthentications = 'publickey';
 
-
+    public $newKeyLocation = '';
+    public $customConfigPath = '';
 
     public $isEditing = false;
     public $originalAlias = '';
@@ -27,6 +29,8 @@ class SshHostManager extends Component
     public function mount(SshConfigService $service)
     {
         $this->refreshHosts($service);
+        $this->newKeyLocation = $this->expandPath('~/.ssh');
+        $this->customConfigPath = Settings::get('ssh_config_path') ?? '';
     }
 
     public function refreshHosts(SshConfigService $service)
@@ -36,9 +40,25 @@ class SshHostManager extends Component
 
     public function pickIdentityFile()
     {
-        $path = Dialog::new()->open();
+        $path = Dialog::new()
+            ->title('Select Identity File')
+            ->properties(['openFile', 'showHiddenFiles'])
+            ->open();
+
         if ($path) {
             $this->identityFile = $path;
+        }
+    }
+
+    public function pickNewKeyLocation()
+    {
+        $path = Dialog::new()
+            ->title('Select Folder for New Key')
+            ->properties(['openDirectory', 'showHiddenFiles', 'createDirectory'])
+            ->open();
+
+        if ($path) {
+            $this->newKeyLocation = $path;
         }
     }
 
@@ -130,25 +150,29 @@ class SshHostManager extends Component
 
     protected function expandPath($path)
     {
-        if (str_starts_with($path, '~/')) {
-            $home = getenv('HOME') ?: $_SERVER['HOME'] ?? '';
-            if (empty($home) && function_exists('posix_getpwuid')) {
-                $home = posix_getpwuid(posix_getuid())['dir'];
-            }
-            return $home . substr($path, 1);
+        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
+
+        if (empty($home) && function_exists('posix_getpwuid')) {
+            $home = posix_getpwuid(posix_getuid())['dir'];
         }
+
+        if (str_starts_with($path, '~/') || str_starts_with($path, '~\\')) {
+            return $home . DIRECTORY_SEPARATOR . substr($path, 2);
+        }
+
         return $path;
     }
 
     protected function contractPath($path)
     {
-        $home = getenv('HOME') ?: $_SERVER['HOME'] ?? '';
+        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
+
         if (empty($home) && function_exists('posix_getpwuid')) {
             $home = posix_getpwuid(posix_getuid())['dir'];
         }
 
         if (str_starts_with($path, $home)) {
-            return '~' . substr($path, strlen($home));
+            return '~' . DIRECTORY_SEPARATOR . substr($path, strlen($home) + 1);
         }
         return $path;
     }
@@ -160,12 +184,14 @@ class SshHostManager extends Component
             return;
         }
 
-        $sshDir = $this->expandPath('~/.ssh');
-        if (!file_exists($sshDir)) {
-            mkdir($sshDir, 0700, true);
+        // Use selected location or default to ~/.ssh
+        $targetDir = $this->newKeyLocation ? $this->expandPath($this->newKeyLocation) : $this->expandPath('~/.ssh');
+
+        if (!file_exists($targetDir)) {
+            mkdir($targetDir, 0700, true);
         }
 
-        $path = $sshDir . '/' . $filename;
+        $path = $targetDir . DIRECTORY_SEPARATOR . $filename;
 
         if (file_exists($path)) {
             $this->dispatch('notify', 'Key already exists with this name.');
@@ -184,10 +210,45 @@ class SshHostManager extends Component
         }
     }
 
-
-
     public function render()
     {
         return view('livewire.ssh-host-manager');
+    }
+
+    public function pickSshConfigFolder()
+    {
+        $path = Dialog::new()
+            ->title('Select SSH Configuration Folder')
+            ->properties(['openDirectory', 'showHiddenFiles', 'createDirectory'])
+            ->open();
+
+        if ($path) {
+            $configPath = $path . DIRECTORY_SEPARATOR . 'config';
+            Settings::set('ssh_config_path', $configPath);
+            $this->customConfigPath = $configPath;
+
+            $this->dispatch('notify', 'SSH Config path updated.');
+            $this->refreshHosts(app(SshConfigService::class));
+        }
+    }
+
+    public function updateConfigPath()
+    {
+        if (empty($this->customConfigPath)) {
+            $this->resetSshConfigPath();
+            return;
+        }
+
+        Settings::set('ssh_config_path', $this->customConfigPath);
+        $this->dispatch('notify', 'SSH Config path updated.');
+        $this->refreshHosts(app(SshConfigService::class));
+    }
+
+    public function resetSshConfigPath()
+    {
+        Settings::set('ssh_config_path', null);
+        $this->customConfigPath = '';
+        $this->dispatch('notify', 'SSH Config path reset to default.');
+        $this->refreshHosts(app(SshConfigService::class));
     }
 }

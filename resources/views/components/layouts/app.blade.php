@@ -129,15 +129,33 @@
     <!-- Toast/Notification Container -->
     <div x-data="{
         notifications: [],
-        add(msg) {
-            this.notifications.push({ id: Date.now(), msg: msg });
-            setTimeout(() => { this.remove(this.notifications[this.notifications.length - 1].id) }, 3000);
+        add(detail) {
+            let msg = detail;
+            if (typeof detail === 'object' && detail !== null) {
+                msg = detail.message || (Array.isArray(detail) ? detail[0] : JSON.stringify(detail));
+            }
+            const id = Date.now();
+            this.notifications.push({ id: id, msg: msg });
+            setTimeout(() => { this.remove(id) }, 5000);
         },
         remove(id) {
             this.notifications = this.notifications.filter(n => n.id !== id);
         }
     }" @notify.window="add($event.detail)"
         class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none">
+
+        <!-- Updated Logic to handle Livewire 3 event parameter formatting -->
+        <script>
+            function parseNotification(detail) {
+                if (typeof detail === 'string') return detail;
+                if (Array.isArray(detail) && detail.length > 0) return detail[0];
+                if (typeof detail === 'object' && detail !== null) {
+                    return detail.message || detail[0] || 'Notification received';
+                }
+                return 'Notification received';
+            }
+        </script>
+
 
         <template x-for="notif in notifications" :key="notif.id">
             <div class="bg-gray-800 border-l-4 border-indigo-500 text-white px-4 py-3 rounded shadow-lg transform transition-all duration-300 pointer-events-auto flex items-center min-w-[300px]"

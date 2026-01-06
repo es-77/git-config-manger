@@ -10,13 +10,24 @@ class SshConfigService
     // Use user's home directory for parsing
     protected function getConfigPath(): string
     {
-        $home = getenv('HOME') ?: $_SERVER['HOME'] ?? '';
+        // 1. Check for custom setting
+        try {
+            $customPath = \Native\Desktop\Facades\Settings::get('ssh_config_path');
+            if ($customPath) {
+                return $customPath;
+            }
+        } catch (\Throwable $e) {
+            // Settings might not be available yet or failed
+        }
+
+        // 2. Default detection
+        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
 
         if (empty($home) && function_exists('posix_getpwuid')) {
             $home = posix_getpwuid(posix_getuid())['dir'];
         }
 
-        return $home . '/.ssh/config';
+        return $home . DIRECTORY_SEPARATOR . '.ssh' . DIRECTORY_SEPARATOR . 'config';
     }
 
     public function getHosts(): array

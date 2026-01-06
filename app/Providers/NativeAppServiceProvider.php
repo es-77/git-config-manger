@@ -21,7 +21,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
             ->rememberState()
             ->frame(false)
             ->hideMenu()
-            ->icon(resource_path('logo.svg'));
+            ->icon(resource_path('logo.png'));
 
         GlobalShortcut::new()
             ->key('CmdOrCtrl+L')

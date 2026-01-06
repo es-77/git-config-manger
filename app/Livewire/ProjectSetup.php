@@ -76,6 +76,22 @@ class ProjectSetup extends Component
         }
     }
 
+    protected function getSshCommand()
+    {
+        $cmd = 'ssh -o StrictHostKeyChecking=accept-new -v';
+
+        try {
+            $customPath = \Native\Desktop\Facades\Settings::get('ssh_config_path');
+            if ($customPath && file_exists($customPath)) {
+                $cmd .= ' -F ' . escapeshellarg($customPath);
+            }
+        } catch (\Throwable $e) {
+            // Fallback to default
+        }
+
+        return $cmd;
+    }
+
     public function runCloneCommand()
     {
         $cmd = $this->cloneCommand;
@@ -83,21 +99,45 @@ class ProjectSetup extends Component
             return;
         }
 
-        // Execute via bash. We set GIT_SSH_COMMAND to accept new host keys automatically
-        // to prevent the process from hanging on the "Are you sure..." prompt.
+        // Capture the config path state for debugging
+        $customPath = \Native\Desktop\Facades\Settings::get('ssh_config_path');
+        $debugInfo = "Config Path: " . ($customPath ?? 'Default (Null)');
+
+        // Execute via bash with custom SSH command
         $result = Process::env([
-            'GIT_SSH_COMMAND' => 'ssh -o StrictHostKeyChecking=accept-new'
-        ])->run(['bash', '-c', $cmd]);
+            'GIT_SSH_COMMAND' => $this->getSshCommand()
+        ])->timeout(120)->run(['bash', '-c', $cmd]);
 
         if ($result->successful()) {
             $this->dispatch('notify', 'Repository cloned successfully.');
 
             // Apply selected profile config if set
             if ($this->cloneSelectedProfile && $this->cloneTargetDirectory) {
-                $this->applyProfileConfig($this->cloneTargetDirectory, $this->cloneSelectedProfile);
+                // Determine the actual repo folder name
+                $repoName = '';
+                $url = trim($this->cloneInputUrl);
+
+                // Extract last part of URL
+                if (preg_match('/\/([^\/]+?)(\.git)?$/', $url, $matches)) {
+                    $repoName = $matches[1];
+                }
+
+                if ($repoName) {
+                    $repoPath = rtrim($this->cloneTargetDirectory, '/') . DIRECTORY_SEPARATOR . $repoName;
+                    $this->applyProfileConfig($repoPath, $this->cloneSelectedProfile);
+                } else {
+                    $this->dispatch('notify', 'Could not determine repo name to set config. Please set manually.');
+                }
             }
         } else {
-            $this->dispatch('notify', 'Clone failed: ' . $result->errorOutput());
+            // Include debug info and error output
+            $error = $result->errorOutput();
+            $this->dispatch('notify', "Clone failed [$debugInfo]. Check logs.");
+
+            // Log full error for user to see (maybe we can show in a modal later, but for now notify)
+            // We'll append the last 500 chars which likely contains the auth error
+            $shortError = substr($error, -500);
+            $this->dispatch('notify', "Error details: " . $shortError);
         }
     }
 
@@ -114,7 +154,6 @@ class ProjectSetup extends Component
         if (preg_match('/^(?:git@|https:\/\/)(?:[\w\.-]+)(?::|\/)(.+)$/', $url, $matches)) {
             $path = $matches[1];
         } else {
-            // Fallback: assume whole string is path if no protocol
             $path = $url;
         }
 
@@ -159,15 +198,13 @@ class ProjectSetup extends Component
             return;
         }
 
-        // Use strict host key checking accept-new for the push as well
         $result = Process::env([
-            'GIT_SSH_COMMAND' => 'ssh -o StrictHostKeyChecking=accept-new'
+            'GIT_SSH_COMMAND' => $this->getSshCommand()
         ])->timeout(120)->run(['bash', '-c', $cmd]);
 
         if ($result->successful()) {
             $this->dispatch('notify', 'Git initialized, origin set, and code pushed.');
 
-            // Apply selected profile config if set
             if ($this->originSelectedProfile && $this->originProjectDirectory) {
                 $this->applyProfileConfig($this->originProjectDirectory, $this->originSelectedProfile);
             }
