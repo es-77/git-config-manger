@@ -16,6 +16,10 @@ class GitCommandManager extends Component
     public $outputLog = [];
     public $isLoading = false;
 
+    // Branch Management
+    public $newBranchName = '';
+    public $renameBranchName = '';
+
     // Expanded Commit Details
     public $selectedCommitHash = null;
     public $commitDetails = [];
@@ -134,6 +138,43 @@ class GitCommandManager extends Component
     {
         // Hard Reset (Discard all changes)
         $this->runGitCommand($git, 'reset', 'Hard Resetting...', ['hard', 'HEAD']);
+    }
+
+    public function gitStatus(GitService $git)
+    {
+        $this->runGitCommand($git, 'getStatus', 'Checking Status...');
+        $this->showConsole();
+    }
+
+    public function gitCheckRemote(GitService $git)
+    {
+        $this->runGitCommand($git, 'getRemotesVerbose', 'Checking Remotes...');
+        $this->showConsole();
+    }
+
+    public function gitListAllBranches(GitService $git)
+    {
+        $this->runGitCommand($git, 'getAllBranches', 'Listing All Branches...');
+        $this->showConsole();
+    }
+
+    public function gitCreateBranch(GitService $git)
+    {
+        if (empty($this->newBranchName)) return;
+        $this->runGitCommand($git, 'createBranch', "Creating branch '{$this->newBranchName}'...", [$this->newBranchName]);
+        $this->newBranchName = ''; // Reset input
+    }
+
+    public function gitRenameBranch(GitService $git)
+    {
+        if (empty($this->renameBranchName)) return;
+        $this->runGitCommand($git, 'renameBranch', "Renaming current to '{$this->renameBranchName}'...", [$this->renameBranchName]);
+        $this->renameBranchName = ''; // Reset input
+    }
+
+    public function gitForcePush(GitService $git)
+    {
+        $this->runGitCommand($git, 'push', 'Force Pushing...', [true]);
     }
 
     protected function runGitCommand(GitService $git, string $method, string $startMsg, array $args = [])

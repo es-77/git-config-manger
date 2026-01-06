@@ -91,7 +91,69 @@
             </button>
 
             <div class="h-4"></div>
+            <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Status & Info</h3>
+
+            <button wire:click="gitStatus" wire:loading.attr="disabled"
+                class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors flex items-center justify-between group border border-gray-700">
+                <span class="text-sm font-semibold text-gray-200">Status</span>
+                <span class="text-xs text-gray-500 font-mono">git status</span>
+            </button>
+
+            <button wire:click="gitCheckRemote" wire:loading.attr="disabled"
+                class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors flex items-center justify-between group border border-gray-700">
+                <span class="text-sm font-semibold text-gray-200">Remotes</span>
+                <span class="text-xs text-gray-500 font-mono">git remote -v</span>
+            </button>
+
+            <button wire:click="gitListAllBranches" wire:loading.attr="disabled"
+                class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors flex items-center justify-between group border border-gray-700">
+                <span class="text-sm font-semibold text-gray-200">All Branches</span>
+                <span class="text-xs text-gray-500 font-mono">git branch -a</span>
+            </button>
+
+            <div class="h-4"></div>
+            <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Branch Management</h3>
+
+            <div class="bg-gray-800 p-3 rounded-lg border border-gray-700 space-y-2">
+                <div class="space-y-1">
+                    <label class="text-[10px] text-gray-400 font-bold uppercase">New Branch</label>
+                    <div class="flex">
+                        <input wire:model="newBranchName" type="text" placeholder="Name..."
+                            class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 min-w-0"
+                            wire:keydown.enter="gitCreateBranch">
+                        <button wire:click="gitCreateBranch" wire:loading.attr="disabled"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 rounded-r flex items-center disabled:opacity-50">
+                            <span class="text-lg pb-1">+</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] text-gray-400 font-bold uppercase">Rename Current</label>
+                    <div class="flex">
+                        <input wire:model="renameBranchName" type="text" placeholder="New Name..."
+                            class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 min-w-0"
+                            wire:keydown.enter="gitRenameBranch">
+                        <button wire:click="gitRenameBranch" wire:loading.attr="disabled"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 rounded-r flex items-center disabled:opacity-50">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Destructive Actions</h3>
+
+            <button wire:click="gitForcePush"
+                wire:confirm="FORCE PUSH: This will OVERWRITE the remote branch with your local changes. Are you completely sure?"
+                wire:loading.attr="disabled"
+                class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-red-900 border border-gray-700 hover:border-red-700 transition-colors flex items-center justify-between group">
+                <span class="text-sm font-semibold text-gray-200">Force Push</span>
+                <span
+                    class="text-[10px] text-red-500 font-bold uppercase border border-red-500 px-1 rounded">Danger</span>
+            </button>
 
             <button wire:click="gitRollback"
                 wire:confirm="ROLLBACK (Mixed Reset): Undo last commit, but KEEP changes? Valid for local commits."
@@ -309,7 +371,7 @@
     </div>
     <!-- Operations Loading Overlay -->
     <div wire:loading.flex
-        wire:target="gitPull, gitPush, gitFetch, gitRollback, gitSoftReset, gitHardReset, switchBranch"
+        wire:target="gitPull, gitPush, gitFetch, gitRollback, gitSoftReset, gitHardReset, switchBranch, gitStatus, gitCheckRemote, gitListAllBranches, gitCreateBranch, gitRenameBranch, gitForcePush"
         style="display: none;"
         class="fixed inset-0 z-50 bg-black/80 flex-col items-center justify-center backdrop-blur-sm transition-opacity">
         <div class="flex flex-col items-center p-8 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl space-y-4">

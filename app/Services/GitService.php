@@ -89,9 +89,13 @@ class GitService
         return $this->runCommand(['git', 'pull'], $path);
     }
 
-    public function push(string $path): array
+    public function push(string $path, bool $force = false): array
     {
-        return $this->runCommand(['git', 'push'], $path);
+        $cmd = ['git', 'push'];
+        if ($force) {
+            $cmd[] = '--force';
+        }
+        return $this->runCommand($cmd, $path);
     }
 
     public function fetch(string $path): array
@@ -126,6 +130,32 @@ class GitService
     public function checkout(string $path, string $branch): array
     {
         return $this->runCommand(['git', 'checkout', $branch], $path);
+    }
+
+    public function createBranch(string $path, string $name): array
+    {
+        return $this->runCommand(['git', 'checkout', '-b', $name], $path);
+    }
+
+    public function renameBranch(string $path, string $newName): array
+    {
+        return $this->runCommand(['git', 'branch', '-m', $newName], $path);
+    }
+
+    public function getStatus(string $path): array
+    {
+        // -s for short status, but normal status is more verbose and readable for our console
+        return $this->runCommand(['git', 'status'], $path);
+    }
+
+    public function getRemotesVerbose(string $path): array
+    {
+        return $this->runCommand(['git', 'remote', '-v'], $path);
+    }
+
+    public function getAllBranches(string $path): array
+    {
+        return $this->runCommand(['git', 'branch', '-a'], $path);
     }
 
     public function getHistory(string $path, int $limit = 15): array
