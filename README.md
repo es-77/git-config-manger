@@ -9,6 +9,21 @@ A powerful NativePHP desktop application designed to simplify managing multiple 
 - **LinkedIn**: [Emmanuel Saleem](https://www.linkedin.com/in/es77/?originalSubdomain=pk)
 - **GitHub**: [es-77](https://github.com/es-77)
 
+## 📥 Downloads
+
+### Linux (Debian/Ubuntu & AppImage)
+- **Download**: [Google Drive Folder](https://drive.google.com/drive/folders/1o95cnlT6y-SaQqtWNfNzcdip8SAPZNWy?usp=sharing)
+- *Includes: `git-config-manager-v1.0.0-x86_64.AppImage.zip` & `git-config-manager-v.deb.zip`*
+
+### Windows
+- **Download**: [Google Drive Folder](https://drive.google.com/drive/folders/1OD6-U-Ebnzs0aPitmhjvvDajE3unMJ7a?usp=sharing)
+- *Includes: `Emmanuel-saleem-git-manager-1.0.0-setup.exe.zip`*
+
+## 🔗 Resources
+
+- **Home Page**: [GitHub Project Page](https://github.com/es-77/-sport-desktop-git-config-manager)
+- **Report Issues**: [GitHub Issues](https://github.com/es-77/-sport-desktop-git-config-manager/issues)
+
 ## Features & Problem Solving
 
 ### 1. Git Identity Manager

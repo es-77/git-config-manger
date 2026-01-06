@@ -172,9 +172,14 @@ class SshHostManager extends Component
         }
 
         if (str_starts_with($path, $home)) {
-            return '~' . DIRECTORY_SEPARATOR . substr($path, strlen($home) + 1);
+            $relativePath = substr($path, strlen($home) + 1);
+            // Ensure forward slashes for SSH config compatibility on Windows
+            $relativePath = str_replace('\\', '/', $relativePath);
+            return '~/' . $relativePath;
         }
-        return $path;
+
+        // Also normalize non-contracted paths to forward slashes
+        return str_replace('\\', '/', $path);
     }
 
     public function generateNewKey($filename)
