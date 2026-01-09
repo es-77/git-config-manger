@@ -111,6 +111,38 @@
                 <span class="text-xs text-gray-500 font-mono">git branch -a</span>
             </button>
 
+            <button wire:click="showStashList" wire:loading.attr="disabled"
+                class="w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors flex items-center justify-between group border border-gray-700">
+                <span class="text-sm font-semibold text-gray-200">Stashes</span>
+                <span class="text-xs text-gray-500 font-mono">git stash list</span>
+            </button>
+
+            <div class="h-4"></div>
+            <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Stash Operations</h3>
+
+            <div class="bg-gray-800 p-3 rounded-lg border border-gray-700 space-y-2">
+                <div class="space-y-1">
+                    <label class="text-[10px] text-gray-400 font-bold uppercase">Stash Message (Optional)</label>
+                    <input wire:model="stashMessage" type="text" placeholder="Message..."
+                        class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 min-w-0">
+                </div>
+                
+                <button wire:click="gitStash('default')" wire:loading.attr="disabled"
+                    class="w-full text-left px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-between group text-xs">
+                    <span class="font-medium text-gray-200">Stash (Tracked)</span>
+                </button>
+                <button wire:click="gitStash('untracked')" wire:loading.attr="disabled"
+                    class="w-full text-left px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-between group text-xs">
+                    <span class="font-medium text-gray-200">Stash (Untracked)</span>
+                    <span class="text-[10px] text-gray-500 bg-gray-900 px-1 rounded">-u</span>
+                </button>
+                <button wire:click="gitStash('all')" wire:loading.attr="disabled"
+                    class="w-full text-left px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-between group text-xs">
+                    <span class="font-medium text-gray-200">Stash (All)</span>
+                    <span class="text-[10px] text-gray-500 bg-gray-900 px-1 rounded">-a</span>
+                </button>
+            </div>
+
             <div class="h-4"></div>
             <h3 class="text-gray-400 text-xs font-bold uppercase tracking-wider">Branch Management</h3>
 
@@ -207,6 +239,10 @@
                 <button wire:click="showHistory"
                     class="px-6 py-2 text-sm font-medium transition-colors border-r border-gray-700 {{ $viewMode === 'history' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700/50' }}">
                     History
+                </button>
+                <button wire:click="showStashList"
+                    class="px-6 py-2 text-sm font-medium transition-colors border-r border-gray-700 {{ $viewMode === 'stash' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700/50' }}">
+                    Stashes
                 </button>
 
                 @if ($viewMode === 'console')
@@ -365,13 +401,53 @@
                             @endif
                         </div>
                     </div>
+                @elseif($viewMode === 'stash')
+                    <!-- Stash List View -->
+                    <div class="absolute inset-0 overflow-y-auto">
+                        @forelse($stashList as $stash)
+                            <div class="border-b border-gray-800 p-4 hover:bg-gray-800/50 transition-colors group flex items-start justify-between">
+                                <div class="flex-1 min-w-0 pr-4">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <span class="font-mono text-xs text-indigo-400 bg-indigo-900/30 px-1.5 py-0.5 rounded border border-indigo-500/30">{{ $stash['index'] }}</span>
+                                        <span class="text-xs text-gray-500">{{ $stash['time'] }}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-200 font-medium truncate" title="{{ $stash['message'] }}">
+                                        {{ $stash['message'] }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center space-x-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                    <button wire:click="gitStashApply('{{ $stash['index'] }}')" wire:loading.attr="disabled"
+                                        class="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-xs rounded text-gray-300 border border-gray-600 transition-colors">
+                                        Apply
+                                    </button>
+                                    <button wire:click="gitStashPop('{{ $stash['index'] }}')" wire:loading.attr="disabled"
+                                        class="px-2 py-1 bg-indigo-900/50 hover:bg-indigo-800/50 text-xs rounded text-indigo-300 border border-indigo-700/50 transition-colors">
+                                        Pop
+                                    </button>
+                                    <button wire:click="gitStashDrop('{{ $stash['index'] }}')" 
+                                        wire:confirm="Are you sure you want to DROP (delete) this stash? {{ $stash['index'] }}"
+                                        wire:loading.attr="disabled"
+                                        class="px-2 py-1 bg-red-900/20 hover:bg-red-900/40 text-xs rounded text-red-400 border border-red-900/50 transition-colors"
+                                        title="Drop (Delete)">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center py-10">
+                                <div class="text-gray-500 mb-2">No stashes found.</div>
+                                <button wire:click="showStashList"
+                                    class="text-indigo-400 hover:text-indigo-300 text-sm">Refresh List</button>
+                            </div>
+                        @endforelse
+                    </div>
                 @endif
             </div>
         </div>
     </div>
     <!-- Operations Loading Overlay -->
     <div wire:loading.flex
-        wire:target="gitPull, gitPush, gitFetch, gitRollback, gitSoftReset, gitHardReset, switchBranch, gitStatus, gitCheckRemote, gitListAllBranches, gitCreateBranch, gitRenameBranch, gitForcePush"
+        wire:target="gitPull, gitPush, gitFetch, gitRollback, gitSoftReset, gitHardReset, switchBranch, gitStatus, gitCheckRemote, gitListAllBranches, gitCreateBranch, gitRenameBranch, gitForcePush, gitStash, gitStashApply, gitStashPop, gitStashDrop, showStashList"
         style="display: none;"
         class="fixed inset-0 z-50 bg-black/80 flex-col items-center justify-center backdrop-blur-sm transition-opacity">
         <div class="flex flex-col items-center p-8 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl space-y-4">

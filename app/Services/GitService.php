@@ -251,4 +251,61 @@ class GitService
             'error' => $process->errorOutput(),
         ];
     }
+
+    public function stash(string $path, bool $includeUntracked = false, bool $includeIgnored = false, ?string $message = null): array
+    {
+        $cmd = ['git', 'stash', 'push'];
+        if ($includeIgnored) {
+            $cmd[] = '--all';
+        } elseif ($includeUntracked) {
+            $cmd[] = '--include-untracked';
+        }
+
+        if ($message) {
+            $cmd[] = '-m';
+            $cmd[] = $message;
+        }
+
+        return $this->runCommand($cmd, $path);
+    }
+
+    public function getStashList(string $path): array
+    {
+        // Format: stash@{0}|Subject|RelativeDate
+        $result = $this->runCommand(['git', 'stash', 'list', '--pretty=format:%gd|%s|%ar'], $path);
+
+        if (!$result['success']) return [];
+
+        $lines = explode("\n", trim($result['output']));
+        $stashes = [];
+
+        foreach ($lines as $line) {
+            if (empty($line)) continue;
+            $parts = explode('|', $line, 3);
+            if (count($parts) === 3) {
+                $stashes[] = [
+                    'index' => $parts[0], // e.g., stash@{0}
+                    'message' => $parts[1],
+                    'time' => $parts[2],
+                ];
+            }
+        }
+
+        return $stashes;
+    }
+
+    public function stashApply(string $path, string $stashRef): array
+    {
+        return $this->runCommand(['git', 'stash', 'apply', $stashRef], $path);
+    }
+
+    public function stashPop(string $path, string $stashRef): array
+    {
+        return $this->runCommand(['git', 'stash', 'pop', $stashRef], $path);
+    }
+
+    public function stashDrop(string $path, string $stashRef): array
+    {
+        return $this->runCommand(['git', 'stash', 'drop', $stashRef], $path);
+    }
 }

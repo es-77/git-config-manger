@@ -24,7 +24,9 @@ class GitCommandManager extends Component
     public $selectedCommitHash = null;
     public $commitDetails = [];
 
-    // File Diff Details
+    // Stash Management
+    public $stashMessage = '';
+    public $stashList = [];
     public $selectedFile = null;
     public $fileDiff = '';
 
@@ -175,6 +177,46 @@ class GitCommandManager extends Component
     public function gitForcePush(GitService $git)
     {
         $this->runGitCommand($git, 'push', 'Force Pushing...', [true]);
+    }
+
+    // Stash Operations
+    public function gitStash(GitService $git, $option = 'default')
+    {
+        // option: default, untracked, all
+        $includeUntracked = ($option === 'untracked' || $option === 'all');
+        $includeIgnored = ($option === 'all');
+
+        $msg = $this->stashMessage ? $this->stashMessage : null;
+        $desc = "Stashing changes" . ($msg ? " ($msg)" : "") . "...";
+
+        $this->runGitCommand($git, 'stash', $desc, [$includeUntracked, $includeIgnored, $msg]);
+        $this->stashMessage = ''; // Reset message
+    }
+
+    public function showStashList(GitService $git)
+    {
+        if (!$this->validateRepo($git)) return;
+
+        $this->viewMode = 'stash';
+        $this->stashList = $git->getStashList($this->directory);
+    }
+
+    public function gitStashApply(GitService $git, $index)
+    {
+        $this->runGitCommand($git, 'stashApply', "Applying stash $index...", [$index]);
+        $this->showStashList($git); // Refresh list
+    }
+
+    public function gitStashPop(GitService $git, $index)
+    {
+        $this->runGitCommand($git, 'stashPop', "Popping stash $index...", [$index]);
+        $this->showStashList($git); // Refresh list
+    }
+
+    public function gitStashDrop(GitService $git, $index)
+    {
+        $this->runGitCommand($git, 'stashDrop', "Dropping stash $index...", [$index]);
+        $this->showStashList($git); // Refresh list
     }
 
     protected function runGitCommand(GitService $git, string $method, string $startMsg, array $args = [])
