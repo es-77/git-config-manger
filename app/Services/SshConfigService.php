@@ -105,6 +105,11 @@ class SshConfigService
         foreach ($hosts as $host) {
             $content .= "Host " . $host['Host'] . "\n";
             foreach ($host['details'] as $key => $value) {
+                if (strtolower($key) === 'identityfile') {
+                    // Fix for Windows: Replace backslashes with forward slashes
+                    // Git Bash / MinGW fails with tilde expansion if backslashes are present
+                    $value = str_replace('\\', '/', $value);
+                }
                 $content .= "  $key $value\n";
             }
             $content .= "\n";
