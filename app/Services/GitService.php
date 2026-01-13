@@ -245,11 +245,39 @@ class GitService
         // Safe execution using Laravel Process
         $process = $path ? Process::path($path)->run($command) : Process::run($command);
 
-        return [
+        $result = [
             'success' => $process->successful(),
             'output' => $process->output(),
             'error' => $process->errorOutput(),
         ];
+
+        // Log the command
+        try {
+            $logEntry = [
+                'command' => implode(' ', $command),
+                'path' => $path,
+                'timestamp' => now()->toDateTimeString(),
+                'success' => $result['success'],
+                'output' => $this->truncateOutput($result['output']),
+                'error' => $result['error'],
+            ];
+
+            $logFile = storage_path('logs/commands.json');
+            // Append as JSON line
+            file_put_contents($logFile, json_encode($logEntry) . PHP_EOL, FILE_APPEND);
+        } catch (\Exception $e) {
+            // Silently fail logging to not disrupt operation
+        }
+
+        return $result;
+    }
+
+    protected function truncateOutput(string $output, int $length = 500): string
+    {
+        if (strlen($output) > $length) {
+            return substr($output, 0, $length) . '... [truncated]';
+        }
+        return $output;
     }
 
     public function stash(string $path, bool $includeUntracked = false, bool $includeIgnored = false, ?string $message = null): array

@@ -113,6 +113,13 @@
                     </svg>
                     <span>Project Setup</span>
                 </a>
+                <a href="/logs" wire:navigate
+                    class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('logs') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Logs</span>
+                </a>
             </nav>
 
             <div class="p-4 border-t border-gray-700 text-xs text-gray-500 text-center">

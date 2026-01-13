@@ -13,6 +13,7 @@ Route::get('/ssh', SshHostManager::class);
 Route::get('/git-ops', GitCommandManager::class);
 Route::get('/project-setup', ProjectSetup::class);
 Route::get('/spotlight', Spotlight::class);
+Route::get('/logs', \App\Livewire\LogViewer::class);
 
 Route::post('/native/minimize', function () {
     Window::minimize();
