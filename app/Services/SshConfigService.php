@@ -21,13 +21,31 @@ class SshConfigService
         }
 
         // 2. Default detection
-        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
+        return $this->resolveDefaultConfigPath();
+    }
 
-        if (empty($home) && function_exists('posix_getpwuid')) {
-            $home = posix_getpwuid(posix_getuid())['dir'];
+    private function resolveDefaultConfigPath(): string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $home = getenv('USERPROFILE');
+        } else {
+            $home = getenv('HOME');
         }
 
-        return $home . DIRECTORY_SEPARATOR . '.ssh' . DIRECTORY_SEPARATOR . 'config';
+        if (!$home) {
+            // Fallback for some environments
+            $home = $_SERVER['HOME'] ?? '';
+            if (empty($home) && function_exists('posix_getpwuid')) {
+                $home = posix_getpwuid(posix_getuid())['dir'];
+            }
+        }
+
+        if (!$home) {
+            // Last resort check, though highly unlikely to fail all above
+            throw new \RuntimeException('User home directory not found');
+        }
+
+        return rtrim($home, '/\\') . DIRECTORY_SEPARATOR . '.ssh' . DIRECTORY_SEPARATOR . 'config';
     }
 
     public function getHosts(): array
@@ -125,25 +143,35 @@ class SshConfigService
 
     public function normalizeConfig(): void
     {
-        $hosts = $this->getHosts();
-        $changed = false;
+        $path = $this->getConfigPath();
 
-        foreach ($hosts as &$host) {
-            if (isset($host['details']) && is_array($host['details'])) {
-                foreach ($host['details'] as $key => &$value) {
-                    if (strtolower($key) === 'identityfile') {
-                        $normalized = $this->contractPath($value);
-                        if ($normalized !== $value) {
-                            $value = $normalized;
-                            $changed = true;
-                        }
-                    }
-                }
+        if (!file_exists($path)) {
+            // Config doesn't exist, nothing to normalize.
+            try {
+                logger()->error('SSH config path missing', ['path' => $path]);
+            } catch (\Throwable $e) {
+                // Logger might not be ready
             }
+            return;
         }
 
-        if ($changed) {
-            $this->writeHosts($hosts);
+        $content = file_get_contents($path);
+
+        // Regex to find IdentityFile [whitespace] path
+        // Preserves the leading indentation/IdentityFile keyword ($m[1])
+        // and safely replaces the path ($m[2]) using contractPath
+        $newContent = preg_replace_callback(
+            '/^(\s*IdentityFile\s+)(.+)$/im',
+            function ($m) {
+                // $m[1] is indentation + "IdentityFile "
+                // $m[2] is the path
+                return $m[1] . $this->contractPath(trim($m[2]));
+            },
+            $content
+        );
+
+        if ($content !== $newContent && $newContent !== null) {
+            file_put_contents($path, $newContent);
         }
     }
 
@@ -164,20 +192,10 @@ class SshConfigService
 
     public function contractPath(string $path): string
     {
-        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
+        // On Windows, the ~ expansion in SSH/Git Bash can be unreliable or inconsistent with PHP's environment.
+        // To be safe, we will always use the absolute path with forward slashes.
+        // This avoids "tilde_expand" errors entirely.
 
-        if (empty($home) && function_exists('posix_getpwuid')) {
-            $home = posix_getpwuid(posix_getuid())['dir'];
-        }
-
-        if (str_starts_with($path, $home)) {
-            $relativePath = substr($path, strlen($home) + 1);
-            // Ensure forward slashes for SSH config compatibility on Windows
-            $relativePath = str_replace('\\', '/', $relativePath);
-            return '~/' . $relativePath;
-        }
-
-        // Also normalize non-contracted paths to forward slashes
         return $this->normalizePath($path);
     }
 

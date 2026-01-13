@@ -251,10 +251,17 @@ class GitService
             'error' => $process->errorOutput(),
         ];
 
+        $this->logCommandResult(implode(' ', $command), $path, $result);
+
+        return $result;
+    }
+
+    public function logCommandResult(string $commandStr, ?string $path, array $result): void
+    {
         // Log the command
         try {
             $logEntry = [
-                'command' => implode(' ', $command),
+                'command' => $commandStr,
                 'path' => $path,
                 'timestamp' => now()->toDateTimeString(),
                 'success' => $result['success'],
@@ -268,8 +275,6 @@ class GitService
         } catch (\Exception $e) {
             // Silently fail logging to not disrupt operation
         }
-
-        return $result;
     }
 
     protected function truncateOutput(string $output, int $length = 500): string

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Services\SshConfigService;
 use App\Services\ProfileService;
+use App\Services\GitService;
 use Native\Desktop\Dialog;
 use Illuminate\Support\Facades\Process;
 
@@ -93,7 +94,7 @@ class ProjectSetup extends Component
         return $cmd;
     }
 
-    public function runCloneCommand()
+    public function runCloneCommand(GitService $gitService)
     {
         $cmd = $this->cloneCommand;
         if (!$cmd) {
@@ -108,6 +109,12 @@ class ProjectSetup extends Component
         $result = Process::env([
             'GIT_SSH_COMMAND' => $this->getSshCommand()
         ])->timeout(120)->run(['bash', '-c', $cmd]);
+
+        $gitService->logCommandResult($cmd, $this->cloneTargetDirectory, [
+            'success' => $result->successful(),
+            'output' => $result->output(),
+            'error' => $result->errorOutput(),
+        ]);
 
         if ($result->successful()) {
             $this->dispatch('notify', 'Repository cloned successfully.');
@@ -187,7 +194,7 @@ class ProjectSetup extends Component
         }
     }
 
-    public function runOriginCommand()
+    public function runOriginCommand(GitService $gitService)
     {
         if (empty($this->originProjectDirectory)) {
             $this->dispatch('notify', 'Please select a project directory first.');
@@ -199,9 +206,16 @@ class ProjectSetup extends Component
             return;
         }
 
+        // Execute via bash with custom SSH command
         $result = Process::env([
             'GIT_SSH_COMMAND' => $this->getSshCommand()
         ])->timeout(120)->run(['bash', '-c', $cmd]);
+
+        $gitService->logCommandResult($cmd, $this->originProjectDirectory, [
+            'success' => $result->successful(),
+            'output' => $result->output(),
+            'error' => $result->errorOutput(),
+        ]);
 
         if ($result->successful()) {
             $this->dispatch('notify', 'Git initialized, origin set, and code pushed.');
