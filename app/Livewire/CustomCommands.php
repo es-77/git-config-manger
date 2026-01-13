@@ -24,6 +24,8 @@ class CustomCommands extends Component
     // Execution state
     public $runningCommandId = null;
     public $directory = '';
+    public $executionLog = [];
+    public $showOutputModal = false;
 
     // Directory Management
     public $recentDirectories = [];
@@ -181,14 +183,29 @@ class CustomCommands extends Component
 
         $this->runningCommandId = $id;
         $this->pendingCommandId = null;
+        $this->executionLog = []; // Reset logs
 
         foreach ($commandData['steps'] as $step) {
             $parts = explode(' ', $step);
-            $git->runCommand($parts, $this->directory);
+            $result = $git->runCommand($parts, $this->directory);
+
+            $this->executionLog[] = [
+                'command' => $step,
+                'success' => $result['success'],
+                'output'  => $result['output'],
+                'error'   => $result['error'],
+            ];
         }
 
-        $this->dispatch('notify', ['message' => "Executed '{$commandData['name']}' successfully."]);
+        $this->showOutputModal = true;
+        // $this->dispatch('notify', ['message' => "Executed '{$commandData['name']}' successfully."]); // Removed generic toast in favor of modal
         $this->runningCommandId = null;
+    }
+
+    public function closeOutputModal()
+    {
+        $this->showOutputModal = false;
+        $this->executionLog = [];
     }
 
     protected function resetForm()

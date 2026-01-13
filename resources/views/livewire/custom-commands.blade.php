@@ -89,15 +89,25 @@
 
                     <div class="flex justify-between items-start mb-2">
                         <h3 class="font-bold text-lg text-white truncate pr-2" title="{{ $cmd['name'] }}">{{ $cmd['name'] }}</h3>
-                        <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button wire:click="edit('{{ $cmd['id'] }}')" class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        <div class="flex items-center gap-2">
+                            <!-- Directive/Directory Display -->
+                            <button wire:click="$set('showDirectoryModal', true)" 
+                                class="flex items-center space-x-1 text-xs text-gray-500 hover:text-indigo-400 bg-gray-900/50 hover:bg-gray-900 px-2 py-1 rounded transition-colors border border-gray-700/50 hover:border-indigo-500/30"
+                                title="Current Exec Directory: {{ $directory }}">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                                <span class="max-w-[80px] truncate">{{ basename($directory) ?: 'No Repo' }}</span>
                             </button>
-                            <button wire:click="delete('{{ $cmd['id'] }}')" 
-                                wire:confirm="Are you sure you want to delete '{{ $cmd['name'] }}'?"
-                                class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
+
+                            <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button wire:click="edit('{{ $cmd['id'] }}')" class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
+                                <button wire:click="delete('{{ $cmd['id'] }}')" 
+                                    wire:confirm="Are you sure you want to delete '{{ $cmd['name'] }}'?"
+                                    class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/30 rounded transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -165,6 +175,56 @@
                         <button wire:click="pickDirectory" class="w-full flex justify-center items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
                             <span>Browse for Folder...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+        <!-- Output Modal -->
+        @if($showOutputModal)
+            <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+                <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                    <div class="p-4 border-b border-gray-700 flex justify-between items-center shrink-0">
+                        <h3 class="font-bold text-white text-lg">Command Execution Results</h3>
+                        <button wire:click="closeOutputModal" class="text-gray-400 hover:text-white">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                        @foreach($executionLog as $log)
+                            <div class="border-l-2 {{ $log['success'] ? 'border-green-500' : 'border-red-500' }} pl-4">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <div class="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider {{ $log['success'] ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400' }}">
+                                        {{ $log['success'] ? 'Success' : 'Failed' }}
+                                    </div>
+                                    <h4 class="font-mono text-sm text-gray-200 font-bold">$ {{ $log['command'] }}</h4>
+                                </div>
+                                
+                                @if(!empty($log['output']))
+                                    <div class="bg-black/30 rounded p-3 mt-2">
+                                        <div class="text-[10px] uppercase text-gray-500 font-bold mb-1">Standard Output</div>
+                                        <pre class="font-mono text-xs text-gray-300 whitespace-pre-wrap">{{ trim($log['output']) }}</pre>
+                                    </div>
+                                @endif
+
+                                @if(!empty($log['error']))
+                                    <div class="bg-red-900/10 border border-red-500/20 rounded p-3 mt-2">
+                                        <div class="text-[10px] uppercase text-red-400 font-bold mb-1">Error Output</div>
+                                        <pre class="font-mono text-xs text-red-300 whitespace-pre-wrap">{{ trim($log['error']) }}</pre>
+                                    </div>
+                                @endif
+                                
+                                @if(empty($log['output']) && empty($log['error']))
+                                    <div class="text-xs text-gray-500 italic mt-1">No output returned.</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="p-4 border-t border-gray-700 bg-gray-900/50 shrink-0 flex justify-end">
+                        <button wire:click="closeOutputModal" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                            Close
                         </button>
                     </div>
                 </div>

@@ -240,7 +240,7 @@ class GitService
         return $result['success'] ? $result['output'] : '';
     }
 
-    protected function runCommand(array $command, ?string $path = null): array
+    public function runCommand(array $command, ?string $path = null): array
     {
         // Safe execution using Laravel Process
         $process = $path ? Process::path($path)->run($command) : Process::run($command);

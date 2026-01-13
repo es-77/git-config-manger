@@ -106,6 +106,13 @@
                     </svg>
                     <span>Git Operations</span>
                 </a>
+                <a href="/custom-commands" wire:navigate
+                    class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('custom-commands') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    <span>Custom Commands</span>
+                </a>
                 <a href="/project-setup" wire:navigate
                     class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('project-setup') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
