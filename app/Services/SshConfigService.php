@@ -106,9 +106,7 @@ class SshConfigService
             $content .= "Host " . $host['Host'] . "\n";
             foreach ($host['details'] as $key => $value) {
                 if (strtolower($key) === 'identityfile') {
-                    // Fix for Windows: Replace backslashes with forward slashes
-                    // Git Bash / MinGW fails with tilde expansion if backslashes are present
-                    $value = str_replace('\\', '/', $value);
+                    $value = $this->contractPath($value);
                 }
                 $content .= "  $key $value\n";
             }
@@ -123,5 +121,68 @@ class SshConfigService
         }
 
         return file_put_contents($path, trim($content) . "\n") !== false;
+    }
+
+    public function normalizeConfig(): void
+    {
+        $hosts = $this->getHosts();
+        $changed = false;
+
+        foreach ($hosts as &$host) {
+            if (isset($host['details']) && is_array($host['details'])) {
+                foreach ($host['details'] as $key => &$value) {
+                    if (strtolower($key) === 'identityfile') {
+                        $normalized = $this->contractPath($value);
+                        if ($normalized !== $value) {
+                            $value = $normalized;
+                            $changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($changed) {
+            $this->writeHosts($hosts);
+        }
+    }
+
+    public function expandPath(string $path): string
+    {
+        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
+
+        if (empty($home) && function_exists('posix_getpwuid')) {
+            $home = posix_getpwuid(posix_getuid())['dir'];
+        }
+
+        if (str_starts_with($path, '~/') || str_starts_with($path, '~\\')) {
+            return $home . DIRECTORY_SEPARATOR . substr($path, 2);
+        }
+
+        return $path;
+    }
+
+    public function contractPath(string $path): string
+    {
+        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
+
+        if (empty($home) && function_exists('posix_getpwuid')) {
+            $home = posix_getpwuid(posix_getuid())['dir'];
+        }
+
+        if (str_starts_with($path, $home)) {
+            $relativePath = substr($path, strlen($home) + 1);
+            // Ensure forward slashes for SSH config compatibility on Windows
+            $relativePath = str_replace('\\', '/', $relativePath);
+            return '~/' . $relativePath;
+        }
+
+        // Also normalize non-contracted paths to forward slashes
+        return $this->normalizePath($path);
+    }
+
+    public function normalizePath(string $path): string
+    {
+        return str_replace('\\', '/', $path);
     }
 }

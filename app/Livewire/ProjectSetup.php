@@ -29,6 +29,7 @@ class ProjectSetup extends Component
 
     public function mount(SshConfigService $service, ProfileService $profileService)
     {
+        $service->normalizeConfig();
         $this->hosts = $service->getHosts();
         $this->profiles = $profileService->getProfiles();
     }

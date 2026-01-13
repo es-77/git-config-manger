@@ -28,8 +28,9 @@ class SshHostManager extends Component
 
     public function mount(SshConfigService $service)
     {
+        $service->normalizeConfig();
         $this->refreshHosts($service);
-        $this->newKeyLocation = $this->expandPath('~/.ssh');
+        $this->newKeyLocation = $service->expandPath('~/.ssh');
         $this->customConfigPath = Settings::get('ssh_config_path') ?? '';
     }
 
@@ -73,7 +74,7 @@ class SshHostManager extends Component
             'HostName' => $this->hostName,
         ];
         if ($this->user) $details['User'] = $this->user;
-        if ($this->identityFile) $details['IdentityFile'] = $this->contractPath($this->identityFile);
+        if ($this->identityFile) $details['IdentityFile'] = $service->contractPath($this->identityFile);
         if ($this->port) $details['Port'] = $this->port;
         if ($this->preferredAuthentications) $details['PreferredAuthentications'] = $this->preferredAuthentications;
 
@@ -129,14 +130,14 @@ class SshHostManager extends Component
         $this->reset(['alias', 'hostName', 'user', 'identityFile', 'port', 'preferredAuthentications', 'isEditing', 'originalAlias']);
     }
 
-    public function copyPublicKey()
+    public function copyPublicKey(SshConfigService $service)
     {
         if (empty($this->identityFile)) {
             $this->dispatch('notify', 'No identity file selected.');
             return;
         }
 
-        $expandedPath = $this->expandPath($this->identityFile);
+        $expandedPath = $service->expandPath($this->identityFile);
         $pubKeyPath = $expandedPath . '.pub';
 
         if (file_exists($pubKeyPath)) {
@@ -148,39 +149,6 @@ class SshHostManager extends Component
         }
     }
 
-    protected function expandPath($path)
-    {
-        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
-
-        if (empty($home) && function_exists('posix_getpwuid')) {
-            $home = posix_getpwuid(posix_getuid())['dir'];
-        }
-
-        if (str_starts_with($path, '~/') || str_starts_with($path, '~\\')) {
-            return $home . DIRECTORY_SEPARATOR . substr($path, 2);
-        }
-
-        return $path;
-    }
-
-    protected function contractPath($path)
-    {
-        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: $_SERVER['HOME'] ?? '';
-
-        if (empty($home) && function_exists('posix_getpwuid')) {
-            $home = posix_getpwuid(posix_getuid())['dir'];
-        }
-
-        if (str_starts_with($path, $home)) {
-            $relativePath = substr($path, strlen($home) + 1);
-            // Ensure forward slashes for SSH config compatibility on Windows
-            $relativePath = str_replace('\\', '/', $relativePath);
-            return '~/' . $relativePath;
-        }
-
-        // Also normalize non-contracted paths to forward slashes
-        return str_replace('\\', '/', $path);
-    }
 
     public function generateNewKey($filename)
     {
@@ -190,7 +158,8 @@ class SshHostManager extends Component
         }
 
         // Use selected location or default to ~/.ssh
-        $targetDir = $this->newKeyLocation ? $this->expandPath($this->newKeyLocation) : $this->expandPath('~/.ssh');
+        $service = app(SshConfigService::class);
+        $targetDir = $this->newKeyLocation ? $service->expandPath($this->newKeyLocation) : $service->expandPath('~/.ssh');
 
         if (!file_exists($targetDir)) {
             mkdir($targetDir, 0700, true);
