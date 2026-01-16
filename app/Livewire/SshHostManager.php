@@ -137,8 +137,32 @@ class SshHostManager extends Component
             return;
         }
 
-        $expandedPath = $service->expandPath($this->identityFile);
+        $this->copyKeyFileContent($this->identityFile, $service);
+    }
+
+    public function copyHostPublicKey($alias, SshConfigService $service)
+    {
+        $host = collect($this->hosts)->firstWhere('Host', $alias);
+        
+        if (!$host || empty($host['details']['IdentityFile'])) {
+            $this->dispatch('notify', 'No identity file configured for this host.');
+            return;
+        }
+
+        $this->copyKeyFileContent($host['details']['IdentityFile'], $service);
+    }
+
+    protected function copyKeyFileContent($path, SshConfigService $service)
+    {
+        $expandedPath = $service->expandPath($path);
+        
+        // Try public key first (.pub)
         $pubKeyPath = $expandedPath . '.pub';
+        
+        // If the path itself ends in .pub, use it directly
+        if (str_ends_with($expandedPath, '.pub')) {
+            $pubKeyPath = $expandedPath;
+        }
 
         if (file_exists($pubKeyPath)) {
             $content = trim(file_get_contents($pubKeyPath));

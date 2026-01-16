@@ -144,10 +144,20 @@
     <div x-data="{
         notifications: [],
         add(detail) {
-            let msg = detail;
-            if (typeof detail === 'object' && detail !== null) {
-                msg = detail.message || (Array.isArray(detail) ? detail[0] : JSON.stringify(detail));
+            let msg = 'Notification';
+            
+            // Console log to debug what we are receiving
+            console.log('Notification event received:', detail);
+
+            if (typeof detail === 'string') {
+                msg = detail;
+            } else if (Array.isArray(detail) && detail.length > 0) {
+                // Livewire dispatch('notify', 'message') often sends content as the first element of array
+                 msg = detail[0]; 
+            } else if (typeof detail === 'object' && detail !== null) {
+                msg = detail.message || detail.content || (detail[0] ? detail[0] : JSON.stringify(detail));
             }
+            
             const id = Date.now();
             this.notifications.push({ id: id, msg: msg });
             setTimeout(() => { this.remove(id) }, 5000);

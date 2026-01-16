@@ -52,13 +52,15 @@ class ProjectSetup extends Component
             $path = $url;
         }
 
-        $cmd = "git clone git@" . $this->cloneSelectedHost . ":" . $path;
+        $cmd = "git clone " . escapeshellarg($this->cloneSelectedHost . ":" . $path);
 
         if ($this->cloneTargetDirectory) {
-            return "cd " . escapeshellarg($this->cloneTargetDirectory) . " && " . $cmd;
+            $targetPath = str_replace('\\', '/', $this->cloneTargetDirectory);
+            // Use git -C for directory context to avoid shell cd issues
+            return "git -C " . escapeshellarg($targetPath) . " clone git@" . $this->cloneSelectedHost . ":" . $path;
         }
 
-        return $cmd;
+        return "git clone git@" . $this->cloneSelectedHost . ":" . $path;
     }
 
     public function pickCloneTargetDirectory()
@@ -80,7 +82,7 @@ class ProjectSetup extends Component
 
     protected function getSshCommand()
     {
-        $cmd = 'ssh -o StrictHostKeyChecking=accept-new -v';
+        $cmd = 'ssh -o StrictHostKeyChecking=accept-new';
 
         try {
             $customPath = \Native\Desktop\Facades\Settings::get('ssh_config_path');
@@ -105,10 +107,11 @@ class ProjectSetup extends Component
         $customPath = \Native\Desktop\Facades\Settings::get('ssh_config_path');
         $debugInfo = "Config Path: " . ($customPath ?? 'Default (Null)');
 
-        // Execute via bash with custom SSH command
+        // Execute directly via default shell (cmd on Windows)
+        // We pass the string directly so Process uses cmd /c
         $result = Process::env([
             'GIT_SSH_COMMAND' => $this->getSshCommand()
-        ])->timeout(120)->run(['bash', '-c', $cmd]);
+        ])->timeout(300)->run($cmd);
 
         $gitService->logCommandResult($cmd, $this->cloneTargetDirectory, [
             'success' => $result->successful(),
@@ -168,11 +171,21 @@ class ProjectSetup extends Component
         // git remote add origin git@alias:user/repo.git
         $newUrl = "git@" . $this->originSelectedHost . ":" . $path;
 
-        $cmd = "git init && (git remote add origin " . $newUrl . " || git remote set-url origin " . $newUrl . ") && git branch -M main && git push -u origin main";
+        // Helper for constructing window-safe commands
+        // If we use git -C, we can chain them with && for CMD/Powershell compatibility in the display
+        // But for Process::run behavior on Windows, && works with string input.
+        
+        $gitCmd = fn($args) => "git " . ($this->originProjectDirectory ? "-C " . escapeshellarg(str_replace('\\', '/', $this->originProjectDirectory)) . " " : "") . $args;
 
-        if ($this->originProjectDirectory) {
-            return "cd " . escapeshellarg($this->originProjectDirectory) . " && " . $cmd;
-        }
+        // git init && (git remote add origin ... || git remote set-url origin ...) && ...
+        // We construct the string using logical operators which work in CMD/PS7
+        
+        $remoteStart = $newUrl; // git@...
+        
+        $cmd = $gitCmd("init");
+        $cmd .= " && (" . $gitCmd("remote add origin " . $newUrl) . " || " . $gitCmd("remote set-url origin " . $newUrl) . ")";
+        $cmd .= " && " . $gitCmd("branch -M main");
+        $cmd .= " && " . $gitCmd("push -u origin main");
 
         return $cmd;
     }
@@ -206,10 +219,10 @@ class ProjectSetup extends Component
             return;
         }
 
-        // Execute via bash with custom SSH command
+        // Execute via default shell (cmd on Windows)
         $result = Process::env([
             'GIT_SSH_COMMAND' => $this->getSshCommand()
-        ])->timeout(120)->run(['bash', '-c', $cmd]);
+        ])->timeout(300)->run($cmd);
 
         $gitService->logCommandResult($cmd, $this->originProjectDirectory, [
             'success' => $result->successful(),
@@ -233,13 +246,17 @@ class ProjectSetup extends Component
         $profile = collect($this->profiles)->firstWhere('id', $profileId);
         if (!$profile) return;
 
+        $directory = str_replace('\\', '/', $directory);
+        
+        $gitBase = "git -C " . escapeshellarg($directory) . " ";
+
         $commands = [
-            "git config user.name " . escapeshellarg($profile['name']),
-            "git config user.email " . escapeshellarg($profile['email'])
+            $gitBase . "config user.name " . escapeshellarg($profile['name']),
+            $gitBase . "config user.email " . escapeshellarg($profile['email'])
         ];
 
         foreach ($commands as $cmd) {
-            Process::run(['bash', '-c', "cd " . escapeshellarg($directory) . " && " . $cmd]);
+            Process::run($cmd);
         }
 
         $this->dispatch('notify', 'Local user config set for: ' . $profile['name']);

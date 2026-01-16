@@ -87,9 +87,17 @@
                                 @endif
                                 
                                 @if($log['error'])
-                                    <div class="mt-3 bg-red-900/10 rounded p-3 overflow-x-auto border border-red-500/20">
-                                        <div class="text-[10px] uppercase font-bold text-red-400 mb-1 tracking-wider">Error Output</div>
-                                        <pre class="font-mono text-xs text-red-300 whitespace-pre-wrap">{{ $log['error'] }}</pre>
+                                    @php
+                                        $isSuccess = $log['success'];
+                                        $borderColor = $isSuccess ? 'border-slate-500/20' : 'border-red-500/20';
+                                        $bgColor = $isSuccess ? 'bg-slate-900' : 'bg-red-900/10';
+                                        $textColor = $isSuccess ? 'text-slate-400' : 'text-red-400';
+                                        $contentColor = $isSuccess ? 'text-slate-300' : 'text-red-300';
+                                        $labelText = $isSuccess ? 'Command Info / Progress' : 'Error Output';
+                                    @endphp
+                                    <div class="mt-3 {{ $bgColor }} rounded p-3 overflow-x-auto border {{ $borderColor }}">
+                                        <div class="text-[10px] uppercase font-bold {{ $textColor }} mb-1 tracking-wider">{{ $labelText }}</div>
+                                        <pre class="font-mono text-xs {{ $contentColor }} whitespace-pre-wrap">{{ $log['error'] }}</pre>
                                     </div>
                                 @endif
                                 

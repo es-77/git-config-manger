@@ -33,6 +33,13 @@ class GitCommandManager extends Component
     public function mount(GitService $git)
     {
         $this->directory = session('current_git_dir', '');
+        
+        // Validate directory before attempting operations to prevent 500 errors
+        if ($this->directory && (!is_dir($this->directory) || !$git->isGitRepo($this->directory))) {
+            $this->directory = '';
+            session()->forget('current_git_dir');
+        }
+
         if ($this->directory) {
             $this->refreshCtx($git);
         }
