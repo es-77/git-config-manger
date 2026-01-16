@@ -186,7 +186,7 @@ class CustomCommands extends Component
         $this->executionLog = []; // Reset logs
 
         foreach ($commandData['steps'] as $step) {
-            $parts = explode(' ', $step);
+            $parts = str_getcsv($step, ' ');
             $result = $git->runCommand($parts, $this->directory);
 
             $this->executionLog[] = [

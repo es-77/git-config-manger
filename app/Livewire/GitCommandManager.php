@@ -170,6 +170,14 @@ class GitCommandManager extends Component
     public function gitCreateBranch(GitService $git)
     {
         if (empty($this->newBranchName)) return;
+        
+        $safeName = $this->sanitizeBranchName($this->newBranchName);
+        
+        if ($safeName !== $this->newBranchName) {
+            $this->addLog("Sanitized branch name: '{$this->newBranchName}' -> '$safeName'", 'text-yellow-300');
+            $this->newBranchName = $safeName;
+        }
+
         $this->runGitCommand($git, 'createBranch', "Creating branch '{$this->newBranchName}'...", [$this->newBranchName]);
         $this->newBranchName = ''; // Reset input
     }
@@ -177,6 +185,14 @@ class GitCommandManager extends Component
     public function gitRenameBranch(GitService $git)
     {
         if (empty($this->renameBranchName)) return;
+
+        $safeName = $this->sanitizeBranchName($this->renameBranchName);
+
+         if ($safeName !== $this->renameBranchName) {
+            $this->addLog("Sanitized branch name: '{$this->renameBranchName}' -> '$safeName'", 'text-yellow-300');
+            $this->renameBranchName = $safeName;
+        }
+
         $this->runGitCommand($git, 'renameBranch', "Renaming current to '{$this->renameBranchName}'...", [$this->renameBranchName]);
         $this->renameBranchName = ''; // Reset input
     }
@@ -284,6 +300,13 @@ class GitCommandManager extends Component
     public function clearLog()
     {
         $this->outputLog = [];
+    }
+
+    protected function sanitizeBranchName($name)
+    {
+        // Remove quotes, common illegal characters, and trim
+        $name = trim($name);
+        return str_replace(['"', "'", ':', '\\', '?', '*', '[', ']', '^', '~', '{', '}'], '', $name);
     }
 
     public function render()
