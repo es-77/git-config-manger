@@ -41,6 +41,7 @@ class SshHostManager extends Component
 
     public function pickIdentityFile()
     {
+        set_time_limit(0);
         $path = Dialog::new()
             ->title('Select Identity File')
             ->properties(['openFile', 'showHiddenFiles'])
@@ -53,6 +54,7 @@ class SshHostManager extends Component
 
     public function pickNewKeyLocation()
     {
+        set_time_limit(0);
         $path = Dialog::new()
             ->title('Select Folder for New Key')
             ->properties(['openDirectory', 'showHiddenFiles', 'createDirectory'])
@@ -215,6 +217,7 @@ class SshHostManager extends Component
 
     public function pickSshConfigFolder()
     {
+        set_time_limit(0);
         $path = Dialog::new()
             ->title('Select SSH Configuration Folder')
             ->properties(['openDirectory', 'showHiddenFiles', 'createDirectory'])
