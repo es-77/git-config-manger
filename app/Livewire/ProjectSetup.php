@@ -26,6 +26,11 @@ class ProjectSetup extends Component
     public $originProjectDirectory = '';
     public $originSelectedProfile = '';
 
+    // Command Actions
+    public $originActionInit = true;
+    public $originActionRemote = false; // Checkbox Unchecked by default (Just Add)
+    public $originActionPush = true;
+
     public $profiles = [];
 
     public function mount(SshConfigService $service, ProfileService $profileService)
@@ -172,22 +177,30 @@ class ProjectSetup extends Component
         $newUrl = "git@" . $this->originSelectedHost . ":" . $path;
 
         // Helper for constructing window-safe commands
-        // If we use git -C, we can chain them with && for CMD/Powershell compatibility in the display
-        // But for Process::run behavior on Windows, && works with string input.
-        
         $gitCmd = fn($args) => "git " . ($this->originProjectDirectory ? "-C " . escapeshellarg(str_replace('\\', '/', $this->originProjectDirectory)) . " " : "") . $args;
 
-        // git init && (git remote add origin ... || git remote set-url origin ...) && ...
-        // We construct the string using logical operators which work in CMD/PS7
-        
-        $remoteStart = $newUrl; // git@...
-        
-        $cmd = $gitCmd("init");
-        $cmd .= " && (" . $gitCmd("remote add origin " . $newUrl) . " || " . $gitCmd("remote set-url origin " . $newUrl) . ")";
-        $cmd .= " && " . $gitCmd("branch -M main");
-        $cmd .= " && " . $gitCmd("push -u origin main");
+        $parts = [];
 
-        return $cmd;
+        if ($this->originActionInit) {
+            $parts[] = $gitCmd("init");
+        }
+
+        // Logic Change: Strict Toggle
+        // Unchecked = Add (Default), Checked = Update
+        if ($this->originActionRemote) {
+            // Checked: Update Existing
+            $parts[] = $gitCmd("remote set-url origin " . $newUrl);
+        } else {
+            // Unchecked: Add New
+            $parts[] = $gitCmd("remote add origin " . $newUrl);
+        }
+
+        if ($this->originActionPush) {
+            $parts[] = $gitCmd("branch -M main");
+            $parts[] = $gitCmd("push -u origin main");
+        }
+
+        return implode(" && ", $parts);
     }
 
     public function pickOriginProjectDirectory()
@@ -247,7 +260,7 @@ class ProjectSetup extends Component
         if (!$profile) return;
 
         $directory = str_replace('\\', '/', $directory);
-        
+
         $gitBase = "git -C " . escapeshellarg($directory) . " ";
 
         $commands = [

@@ -175,6 +175,24 @@
                 </div>
 
                 <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Actions</label>
+                    <div class="space-y-2">
+                        <label class="inline-flex items-center space-x-2 cursor-pointer bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full hover:border-indigo-500 transition-colors">
+                            <input type="checkbox" wire:model.live="originActionInit" class="form-checkbox text-indigo-500 rounded bg-gray-800 border-gray-600 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-sm text-gray-300">Initialize Repository (git init)</span>
+                        </label>
+                        <label class="inline-flex items-center space-x-2 cursor-pointer bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full hover:border-indigo-500 transition-colors">
+                            <input type="checkbox" wire:model.live="originActionRemote" class="form-checkbox text-indigo-500 rounded bg-gray-800 border-gray-600 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-sm text-gray-300">Update Existing Remote Origin (set-url)</span>
+                        </label>
+                        <label class="inline-flex items-center space-x-2 cursor-pointer bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full hover:border-indigo-500 transition-colors">
+                            <input type="checkbox" wire:model.live="originActionPush" class="form-checkbox text-indigo-500 rounded bg-gray-800 border-gray-600 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-sm text-gray-300">Branch & Push (main)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
                     <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Project
                         Directory (Where to run commands)</label>
                     <div class="flex space-x-2">
