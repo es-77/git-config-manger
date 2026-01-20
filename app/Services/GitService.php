@@ -341,4 +341,127 @@ class GitService
     {
         return $this->runCommand(['git', 'stash', 'drop', $stashRef], $path);
     }
+
+    /**
+     * List all worktrees for a repository
+     * 
+     * @param string $path Path to the main repository
+     * @return array Array of worktrees with path, branch, and head info
+     */
+    public function listWorktrees(string $path): array
+    {
+        $result = $this->runCommand(['git', 'worktree', 'list', '--porcelain'], $path);
+
+        if (!$result['success']) {
+            return [];
+        }
+
+        $lines = explode("\n", trim($result['output']));
+        $worktrees = [];
+        $current = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            if (empty($line)) {
+                // Empty line separates worktrees
+                if (!empty($current)) {
+                    $worktrees[] = $current;
+                    $current = [];
+                }
+                continue;
+            }
+
+            if (str_starts_with($line, 'worktree ')) {
+                $current['path'] = substr($line, 9);
+            } elseif (str_starts_with($line, 'HEAD ')) {
+                $current['head'] = substr($line, 5);
+            } elseif (str_starts_with($line, 'branch ')) {
+                $branchRef = substr($line, 7);
+                // Extract branch name from refs/heads/branch-name
+                $current['branch'] = str_replace('refs/heads/', '', $branchRef);
+            } elseif ($line === 'bare') {
+                $current['bare'] = true;
+            } elseif ($line === 'detached') {
+                $current['detached'] = true;
+                $current['branch'] = 'HEAD (detached)';
+            }
+        }
+
+        // Add the last worktree if exists
+        if (!empty($current)) {
+            $worktrees[] = $current;
+        }
+
+        return $worktrees;
+    }
+
+    /**
+     * Add a new worktree
+     * 
+     * @param string $repoPath Path to the main repository
+     * @param string $worktreePath Path where the new worktree should be created
+     * @param string $branch Branch name to checkout in the worktree
+     * @param bool $createBranch Whether to create a new branch
+     * @return array Command result
+     */
+    public function addWorktree(string $repoPath, string $worktreePath, string $branch, bool $createBranch = false): array
+    {
+        $cmd = ['git', 'worktree', 'add'];
+        
+        if ($createBranch) {
+            $cmd[] = '-b';
+            $cmd[] = $branch;
+            $cmd[] = $worktreePath;
+        } else {
+            $cmd[] = $worktreePath;
+            $cmd[] = $branch;
+        }
+
+        return $this->runCommand($cmd, $repoPath);
+    }
+
+    /**
+     * Remove a worktree
+     * 
+     * @param string $worktreePath Path to the worktree to remove
+     * @param bool $force Force removal even with uncommitted changes
+     * @return array Command result
+     */
+    public function removeWorktree(string $worktreePath, bool $force = false): array
+    {
+        $cmd = ['git', 'worktree', 'remove'];
+        
+        if ($force) {
+            $cmd[] = '--force';
+        }
+        
+        $cmd[] = $worktreePath;
+
+        // Run from the worktree's parent git directory
+        // We need to find the .git directory
+        $gitDir = dirname($worktreePath);
+        while ($gitDir !== '/' && !is_dir($gitDir . '/.git')) {
+            $gitDir = dirname($gitDir);
+        }
+
+        return $this->runCommand($cmd, $gitDir);
+    }
+
+    /**
+     * Get the status of a worktree (check if it has uncommitted changes)
+     * 
+     * @param string $worktreePath Path to the worktree
+     * @return array Status information with 'clean' boolean
+     */
+    public function getWorktreeStatus(string $worktreePath): array
+    {
+        $result = $this->runCommand(['git', 'status', '--porcelain'], $worktreePath);
+        
+        return [
+            'success' => $result['success'],
+            'clean' => $result['success'] && empty(trim($result['output'])),
+            'output' => $result['output']
+        ];
+    }
 }
