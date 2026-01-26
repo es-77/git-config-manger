@@ -30,19 +30,91 @@ class GitCommandManager extends Component
     public $selectedFile = null;
     public $fileDiff = '';
 
+    public $recentRepos = [];
+
     public function mount(GitService $git)
     {
         $this->directory = session('current_git_dir', '');
-        
+
         // Validate directory before attempting operations to prevent 500 errors
         if ($this->directory && (!is_dir($this->directory) || !$git->isGitRepo($this->directory))) {
             $this->directory = '';
             session()->forget('current_git_dir');
         }
 
+        $this->recentRepos = $this->getStoredRepos();
+
         if ($this->directory) {
             $this->refreshCtx($git);
+            $this->storeRepo($this->directory); // Update timestamp
         }
+    }
+
+    protected function getStoredRepos(): array
+    {
+        $path = storage_path('app/recent-repos.json');
+        if (file_exists($path)) {
+            return json_decode(file_get_contents($path), true) ?? [];
+        }
+        return [];
+    }
+
+    protected function storeRepo(string $path)
+    {
+        $repos = $this->getStoredRepos();
+        $name = basename($path);
+
+        // Remove if exists
+        $repos = array_filter($repos, fn($r) => $r['path'] !== $path);
+
+        // Add to top
+        array_unshift($repos, [
+            'path' => $path,
+            'name' => $name,
+            'last_accessed' => now()->toDateTimeString()
+        ]);
+
+        // Keep only last 10
+        $repos = array_slice($repos, 0, 10);
+
+        // Ensure directory exists
+        if (!is_dir(dirname(storage_path('app/recent-repos.json')))) {
+            mkdir(dirname(storage_path('app/recent-repos.json')), 0755, true);
+        }
+
+        file_put_contents(storage_path('app/recent-repos.json'), json_encode($repos));
+        $this->recentRepos = $repos;
+    }
+
+    public function removeRepo($path)
+    {
+        $repos = $this->getStoredRepos();
+        $repos = array_filter($repos, fn($r) => $r['path'] !== $path);
+        file_put_contents(storage_path('app/recent-repos.json'), json_encode($repos));
+        $this->recentRepos = $repos;
+    }
+
+    public function openRecent($path, GitService $git)
+    {
+        if (!is_dir($path)) {
+            $this->addLog("Repository not found at path: $path", 'text-red-400');
+            $this->removeRepo($path);
+            return;
+        }
+
+        $this->directory = $path;
+        session(['current_git_dir' => $path]);
+        $this->storeRepo($path);
+        $this->refreshCtx($git);
+        $this->addLog("Selected directory: $path");
+        $this->viewMode = 'console'; // Reset to console
+    }
+
+    public function backToRepos()
+    {
+        $this->directory = '';
+        session()->forget('current_git_dir');
+        $this->recentRepos = $this->getStoredRepos();
     }
 
     // ... existing ...
@@ -81,12 +153,23 @@ class GitCommandManager extends Component
 
     public function pickDirectory(GitService $git)
     {
-        $path = Dialog::new()->folders()->open();
-        if ($path) {
-            $this->directory = $path;
-            session(['current_git_dir' => $path]);
-            $this->refreshCtx($git);
-            $this->addLog("Selected directory: $path");
+        try {
+            $path = Dialog::new()->folders()->open();
+            if ($path) {
+                // Verify it's a git repo
+                if (!$git->isGitRepo($path)) {
+                    $this->addLog("Selected directory is not a Git repository", 'text-yellow-400');
+                    return;
+                }
+
+                $this->directory = $path;
+                session(['current_git_dir' => $path]);
+                $this->storeRepo($path);
+                $this->refreshCtx($git);
+                $this->addLog("Selected directory: $path");
+            }
+        } catch (\Exception $e) {
+            $this->addLog("Error selecting directory: " . $e->getMessage(), 'text-red-400');
         }
     }
 
@@ -170,9 +253,9 @@ class GitCommandManager extends Component
     public function gitCreateBranch(GitService $git)
     {
         if (empty($this->newBranchName)) return;
-        
+
         $safeName = $this->sanitizeBranchName($this->newBranchName);
-        
+
         if ($safeName !== $this->newBranchName) {
             $this->addLog("Sanitized branch name: '{$this->newBranchName}' -> '$safeName'", 'text-yellow-300');
             $this->newBranchName = $safeName;
@@ -188,7 +271,7 @@ class GitCommandManager extends Component
 
         $safeName = $this->sanitizeBranchName($this->renameBranchName);
 
-         if ($safeName !== $this->renameBranchName) {
+        if ($safeName !== $this->renameBranchName) {
             $this->addLog("Sanitized branch name: '{$this->renameBranchName}' -> '$safeName'", 'text-yellow-300');
             $this->renameBranchName = $safeName;
         }
