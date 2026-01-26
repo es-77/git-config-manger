@@ -457,4 +457,98 @@ class GitService
             'output' => $result['output']
         ];
     }
+    /**
+     * Get the reflog history
+     * 
+     * @param string $path Path to repository
+     * @param int $limit Number of entries to retrieve
+     * @return array Array of reflog entries
+     */
+    public function getReflog(string $path, int $limit = 50): array
+    {
+        $result = $this->runCommand([
+            'git',
+            'reflog',
+            '-' . $limit,
+            '--date=relative',
+            '--pretty=format:%h|%gd|%gs|%cr' // shortened hash | ref selector | subject | relative date
+        ], $path);
+
+        if (!$result['success']) {
+            return [];
+        }
+
+        $lines = explode("\n", trim($result['output']));
+        $reflog = [];
+
+        foreach ($lines as $line) {
+            $parts = explode('|', $line, 4);
+            if (count($parts) === 4) {
+                // Parse action and real message from the subject (%gs)
+                // Format is usually "action: details"
+                $fullMessage = $parts[2];
+                $action = 'unknown';
+                $message = $fullMessage;
+
+                if (str_contains($fullMessage, ': ')) {
+                    [$action, $message] = explode(': ', $fullMessage, 2);
+                } elseif (str_contains($fullMessage, ' ')) {
+                    // Fallback for simple actions without colon if any (rare in reflog)
+                    [$action, $message] = explode(' ', $fullMessage, 2);
+                }
+
+                $reflog[] = [
+                    'hash' => $parts[0],
+                    'selector' => $parts[1], // e.g. HEAD@{0}
+                    'action' => $action,
+                    'message' => $message,
+                    'date' => $parts[3]
+                ];
+            }
+        }
+
+        return $reflog;
+    }
+
+    /**
+     * Checkout a specific reference (detached HEAD if it's a commit)
+     * 
+     * @param string $path Path to repository
+     * @param string $ref Reference to checkout (e.g., HEAD@{1} or hash)
+     * @return array Command result
+     */
+    public function checkoutRef(string $path, string $ref): array
+    {
+        return $this->runCommand(['git', 'checkout', $ref], $path);
+    }
+
+    /**
+     * Get details about the current HEAD commit
+     * 
+     * @param string $path Path to repository
+     * @return array|null Commit details or null if failure
+     */
+    public function getHeadCommit(string $path): ?array
+    {
+        $result = $this->runCommand([
+            'git',
+            'log',
+            '-1',
+            '--pretty=format:%h|%an|%ar|%s'
+        ], $path);
+
+        if (!$result['success']) return null;
+
+        $parts = explode('|', trim($result['output']), 4);
+        if (count($parts) === 4) {
+            return [
+                'hash' => $parts[0],
+                'author' => $parts[1],
+                'date' => $parts[2],
+                'message' => $parts[3]
+            ];
+        }
+
+        return null;
+    }
 }

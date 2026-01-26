@@ -129,6 +129,14 @@
                     </svg>
                     <span>Git Worktrees</span>
                 </a>
+                <a href="/git-reflog" wire:navigate
+                    class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('git-reflog') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Reflog</span>
+                </a>
                 <a href="/logs" wire:navigate
                     class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors {{ request()->is('logs') ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

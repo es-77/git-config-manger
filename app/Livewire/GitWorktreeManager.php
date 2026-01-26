@@ -14,10 +14,75 @@ class GitWorktreeManager extends Component
     public $newPath = '';
     public $createNewBranch = false;
     public $loading = false;
+    public $recentRepos = [];
 
     public function mount()
     {
-        // Initialize empty state
+        $this->recentRepos = $this->getStoredRepos();
+    }
+
+    protected function getStoredRepos(): array
+    {
+        $path = storage_path('app/recent-repos.json');
+        if (file_exists($path)) {
+            return json_decode(file_get_contents($path), true) ?? [];
+        }
+        return [];
+    }
+
+    protected function storeRepo(string $path)
+    {
+        $repos = $this->getStoredRepos();
+        $name = basename($path);
+
+        // Remove if exists
+        $repos = array_filter($repos, fn($r) => $r['path'] !== $path);
+
+        // Add to top
+        array_unshift($repos, [
+            'path' => $path,
+            'name' => $name,
+            'last_accessed' => now()->toDateTimeString()
+        ]);
+
+        // Keep only last 10
+        $repos = array_slice($repos, 0, 10);
+
+        // Ensure directory exists
+        if (!is_dir(dirname(storage_path('app/recent-repos.json')))) {
+            mkdir(dirname(storage_path('app/recent-repos.json')), 0755, true);
+        }
+
+        file_put_contents(storage_path('app/recent-repos.json'), json_encode($repos));
+        $this->recentRepos = $repos;
+    }
+
+    public function removeRepo($path)
+    {
+        $repos = $this->getStoredRepos();
+        $repos = array_filter($repos, fn($r) => $r['path'] !== $path);
+        file_put_contents(storage_path('app/recent-repos.json'), json_encode($repos));
+        $this->recentRepos = $repos;
+    }
+
+    public function openRecent($path, GitService $git)
+    {
+        if (!is_dir($path)) {
+            $this->dispatch('notify', 'Repository not found at path: ' . $path);
+            $this->removeRepo($path);
+            return;
+        }
+
+        $this->repositoryPath = $path;
+        $this->storeRepo($path);
+        $this->loadWorktrees($git);
+    }
+
+    public function backToRepos()
+    {
+        $this->repositoryPath = '';
+        $this->worktrees = [];
+        $this->recentRepos = $this->getStoredRepos();
     }
 
     public function selectRepository(GitService $git)
@@ -39,6 +104,7 @@ class GitWorktreeManager extends Component
             }
 
             $this->repositoryPath = $path;
+            $this->storeRepo($path);
             $this->loadWorktrees($git);
             $this->dispatch('notify', 'Repository loaded successfully');
         } catch (\Exception $e) {

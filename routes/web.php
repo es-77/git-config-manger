@@ -16,6 +16,7 @@ Route::get('/project-setup', ProjectSetup::class);
 Route::get('/git-worktrees', \App\Livewire\GitWorktreeManager::class);
 Route::get('/spotlight', Spotlight::class);
 Route::get('/logs', \App\Livewire\LogViewer::class);
+Route::get('/git-reflog', \App\Livewire\GitReflogManager::class);
 
 Route::post('/native/minimize', function () {
     Window::minimize();

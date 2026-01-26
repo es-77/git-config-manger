@@ -1,41 +1,103 @@
 <div class="h-full flex flex-col p-6 space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700">
         <div>
             <h1 class="text-2xl font-bold text-white">Git Worktree Manager</h1>
             <p class="text-gray-400 text-sm">Manage multiple worktrees for parallel branch development</p>
         </div>
-    </div>
-
-    <!-- Section 1: Repository Selector -->
-    <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-sm">
-        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Selected Repository</label>
-        <div class="flex space-x-2 items-center">
-            <div class="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-gray-300 flex items-center truncate">
-                @if($repositoryPath)
-                    <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <div>
+            @if($repositoryPath)
+                <button wire:click="backToRepos" 
+                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
-                    <span class="truncate" title="{{ $repositoryPath }}">{{ $repositoryPath }}</span>
-                @else
-                    <svg class="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span class="text-gray-500">No repository selected</span>
-                @endif
-            </div>
-            <button wire:click="selectRepository" 
-                class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                </svg>
-                <span>Select Repository</span>
-            </button>
+                    <span>Back to Repos</span>
+                </button>
+            @endif
         </div>
     </div>
 
-    <!-- Section 2: Create New Worktree -->
-    @if($repositoryPath)
+    @if(!$repositoryPath)
+         <!-- Recent Repositories View -->
+        <div class="max-w-4xl mx-auto w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-medium text-white">Select a Repository</h2>
+                <button wire:click="selectRepository" 
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center space-x-2 shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Open Repository</span>
+                </button>
+            </div>
+
+            @if(count($recentRepos) > 0)
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach($recentRepos as $repo)
+                        <div wire:click="openRecent('{{ $repo['path'] }}')" 
+                            class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-indigo-500 hover:bg-gray-750 transition-all cursor-pointer group shadow-sm hover:shadow-indigo-500/10 flex flex-col">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center space-x-3">
+                                    <div class="p-2 bg-gray-700 rounded-lg group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-white group-hover:text-indigo-400 transition-colors">{{ $repo['name'] }}</h3>
+                                        <p class="text-xs text-gray-500 truncate max-w-[250px]" title="{{ $repo['path'] }}">{{ $repo['path'] }}</p>
+                                    </div>
+                                </div>
+                                <button wire:click.stop="removeRepo('{{ $repo['path'] }}')" 
+                                    class="p-1 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded transition-colors"
+                                    title="Remove from history">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="mt-auto pt-2 flex items-center justify-between text-xs text-gray-500">
+                                <span>Last opened: {{ \Carbon\Carbon::parse($repo['last_accessed'])->diffForHumans() }}</span>
+                                <span class="group-hover:translate-x-1 transition-transform text-indigo-500 font-medium">Manage Worktrees &rarr;</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-12 border-2 border-dashed border-gray-700 rounded-xl bg-gray-800/50">
+                    <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-400">No recent repositories</h3>
+                    <p class="text-gray-500 mt-1">Open a repository to manage worktrees</p>
+                </div>
+            @endif
+        </div>
+    @else
+        <!-- Section 1: Repository Info -->
+        <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-sm">
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Selected Repository</label>
+            <div class="flex space-x-2 items-center">
+                <div class="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-gray-300 flex items-center truncate">
+                    @if($repositoryPath)
+                        <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="truncate" title="{{ $repositoryPath }}">{{ $repositoryPath }}</span>
+                    @endif
+                </div>
+                <button wire:click="selectRepository" 
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                    </svg>
+                    <span>Change Repo</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Section 2: Create New Worktree -->
         <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-sm">
             <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Create New Worktree</h2>
             
@@ -84,10 +146,8 @@
                 </div>
             </div>
         </div>
-    @endif
 
-    <!-- Section 3: Worktree List -->
-    @if($repositoryPath)
+        <!-- Section 3: Worktree List -->
         <div class="flex-1 overflow-y-auto">
             <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Existing Worktrees</h2>
             
@@ -168,17 +228,6 @@
                     <p>No worktrees found. Create one above.</p>
                 </div>
             @endif
-        </div>
-    @else
-        <!-- Empty State -->
-        <div class="flex-1 flex flex-col items-center justify-center text-gray-500">
-            <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z">
-                </path>
-            </svg>
-            <p class="text-lg font-medium mb-2">No Repository Selected</p>
-            <p class="text-sm">Select a Git repository to manage its worktrees</p>
         </div>
     @endif
 </div>
