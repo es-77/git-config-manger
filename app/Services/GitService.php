@@ -362,7 +362,7 @@ class GitService
 
         foreach ($lines as $line) {
             $line = trim($line);
-            
+
             if (empty($line)) {
                 // Empty line separates worktrees
                 if (!empty($current)) {
@@ -408,7 +408,7 @@ class GitService
     public function addWorktree(string $repoPath, string $worktreePath, string $branch, bool $createBranch = false): array
     {
         $cmd = ['git', 'worktree', 'add'];
-        
+
         if ($createBranch) {
             $cmd[] = '-b';
             $cmd[] = $branch;
@@ -428,24 +428,17 @@ class GitService
      * @param bool $force Force removal even with uncommitted changes
      * @return array Command result
      */
-    public function removeWorktree(string $worktreePath, bool $force = false): array
+    public function removeWorktree(string $mainRepoPath, string $worktreePath, bool $force = false): array
     {
         $cmd = ['git', 'worktree', 'remove'];
-        
+
         if ($force) {
             $cmd[] = '--force';
         }
-        
+
         $cmd[] = $worktreePath;
 
-        // Run from the worktree's parent git directory
-        // We need to find the .git directory
-        $gitDir = dirname($worktreePath);
-        while ($gitDir !== '/' && !is_dir($gitDir . '/.git')) {
-            $gitDir = dirname($gitDir);
-        }
-
-        return $this->runCommand($cmd, $gitDir);
+        return $this->runCommand($cmd, $mainRepoPath);
     }
 
     /**
@@ -457,7 +450,7 @@ class GitService
     public function getWorktreeStatus(string $worktreePath): array
     {
         $result = $this->runCommand(['git', 'status', '--porcelain'], $worktreePath);
-        
+
         return [
             'success' => $result['success'],
             'clean' => $result['success'] && empty(trim($result['output'])),

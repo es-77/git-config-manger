@@ -25,6 +25,7 @@ class GitWorktreeManager extends Component
         try {
             $path = Dialog::new()
                 ->title('Select Git Repository')
+                ->folders()
                 ->open();
 
             if (!$path) {
@@ -132,7 +133,7 @@ class GitWorktreeManager extends Component
 
         try {
             $this->loading = true;
-            $result = $git->removeWorktree($path, false);
+            $result = $git->removeWorktree($this->repositoryPath, $path, false);
 
             if ($result['success']) {
                 $this->dispatch('notify', 'Worktree removed successfully');
@@ -156,7 +157,7 @@ class GitWorktreeManager extends Component
 
         try {
             $this->loading = true;
-            $result = $git->removeWorktree($path, true);
+            $result = $git->removeWorktree($this->repositoryPath, $path, true);
 
             if ($result['success']) {
                 $this->dispatch('notify', 'Worktree force removed successfully');
@@ -193,6 +194,7 @@ class GitWorktreeManager extends Component
         try {
             $path = Dialog::new()
                 ->title('Select Worktree Location')
+                ->folders()
                 ->open();
 
             if ($path) {
